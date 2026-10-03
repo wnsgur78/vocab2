@@ -50,6 +50,14 @@
     padding:6px 11px; border-radius:999px; flex-shrink:0;
   }
   header p{margin:8px 0 0; font-size:12px; color:var(--sub); font-weight:600;}
+  .header-right{display:flex; align-items:center; gap:6px; flex-shrink:0;}
+  .account-btn{
+    border:none; font-size:11px; font-weight:800; padding:6px 11px; border-radius:999px;
+    background:var(--primary); color:#fff; flex-shrink:0; max-width:92px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .account-btn.on{background:var(--card); color:var(--text); box-shadow:var(--shadow);}
+  .account-btn .dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--correct); margin-right:5px; vertical-align:middle;}
 
   main{flex:1; padding:6px 14px 106px;}
 
@@ -310,7 +318,10 @@
         <span class="brand-badge"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5c-1.6-1-4-1.5-6-1.2C4.9 5.4 4 6.2 4 7.2v10.3c0 .8.8 1.3 1.6 1.1 1.9-.4 4-.1 5.6.9V6.5Z"/><path d="M12 6.5c1.6-1 4-1.5 6-1.2 1.1.2 2 1 2 2v10.3c0 .8-.8 1.3-1.6 1.1-1.9-.4-4-.1-5.6.9V6.5Z"/></svg></span>
         <h1>영단어 마스터</h1>
       </div>
-      <span class="fav-badge" id="favBadge">즐겨찾기 0</span>
+      <div class="header-right">
+        <span class="fav-badge" id="favBadge">즐겨찾기 0</span>
+        <button class="account-btn" id="accountBtn" onclick="accountClick()">로그인</button>
+      </div>
     </div>
     <p id="headerSub">DAY 21~28, 39~50 · 600 단어</p>
   </header>
@@ -410,10 +421,42 @@ function saveFavoritesToStorage(){
   try{
     const favNos = wordData.filter(w => w.fav).map(w => w.no);
     localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(favNos));
+    if(window.cloudSyncFavs) window.cloudSyncFavs(favNos);
   }catch(e){
     console.warn('즐겨찾기 데이터를 저장하지 못했습니다.', e);
   }
 }
+
+/* ---------- 클라우드(로그인) 연동용 훅 ---------- */
+function accountClick(){
+  if(window.cloudAuthClick){ window.cloudAuthClick(); }
+  else { alert('로그인 기능을 불러오는 중이에요. 잠시 후 다시 눌러 주세요.'); }
+}
+
+window.cloudHooks = {
+  getLocalFavs(){
+    return wordData.filter(w => w.fav).map(w => w.no);
+  },
+  applyFavs(nos){
+    const set = new Set(nos);
+    wordData.forEach(w => { w.fav = set.has(w.no); });
+    try{ localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify([...set])); }catch(e){}
+    updateFavBadge();
+    if(typeof buildWordList === 'function'){ buildWordList(); buildFavList(); }
+  },
+  onUser(user){
+    const btn = document.getElementById('accountBtn');
+    if(!btn) return;
+    if(user){
+      const name = (user.displayName || user.email || '내 계정').split(' ')[0];
+      btn.innerHTML = '<span class="dot"></span>' + name.replace(/[<>&]/g, '');
+      btn.classList.add('on');
+    } else {
+      btn.textContent = '로그인';
+      btn.classList.remove('on');
+    }
+  }
+};
 
 loadFavoritesFromStorage();
 
@@ -1052,6 +1095,119 @@ function switchTab(tab){
    ======================================================= */
 buildWordList();
 buildFavList();
+</script>
+
+<script type="module">
+/* =======================================================
+   Firebase: 구글 로그인 + 즐겨찾기 클라우드 저장
+   - 로그인하지 않아도 앱은 그대로 동작합니다(이 기기에만 저장).
+   - 로그인하면 즐겨찾기가 계정에 저장되어 다른 기기에서도 보입니다.
+   ======================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBZ61LqaWwVwjUfe5Jw4ELyrdRQUR-5VLQ",
+  authDomain: "vocab2-6ac0c.firebaseapp.com",
+  projectId: "vocab2-6ac0c",
+  storageBucket: "vocab2-6ac0c.firebasestorage.app",
+  messagingSenderId: "22889379388",
+  appId: "1:22889379388:web:daf94bf1879cefc80a3539"
+};
+
+const SYNC_KEY = 'vocabmaster_synced_uid';
+const V = '10.14.1';
+
+try{
+  const [appMod, authMod, fsMod] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
+  ]);
+  const { initializeApp } = appMod;
+  const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = authMod;
+  const { getFirestore, doc, getDoc, setDoc } = fsMod;
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  let currentUser = null;
+  let saveTimer = null;
+
+  const favRef = (uid) => doc(db, 'users', uid, 'data', 'favorites');
+  const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+
+  window.cloudSyncFavs = (nos) => {
+    if(!currentUser) return;
+    const uid = currentUser.uid;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      setDoc(favRef(uid), { favs: nos, updatedAt: Date.now() })
+        .catch(e => console.warn('클라우드 저장 실패', e));
+    }, 500);
+  };
+
+  async function pullAndMerge(user){
+    const snap = await getDoc(favRef(user.uid));
+    const local = window.cloudHooks.getLocalFavs();
+    const syncedUid = localStorage.getItem(SYNC_KEY);
+    const remote = snap.exists() ? (snap.data().favs || []) : null;
+
+    let finalNos;
+    if(remote === null){
+      // 계정에 저장된 게 없음: 이 기기가 다른 계정 것이 아니면 현재 기기 즐겨찾기를 올림
+      finalNos = (syncedUid && syncedUid !== user.uid) ? [] : local;
+    } else if(!syncedUid){
+      // 한 번도 연동 안 한 기기: 합쳐서 잃어버리는 게 없게 함
+      finalNos = [...new Set([...remote, ...local])];
+    } else {
+      // 이미 연동된 기기: 계정에 저장된 값이 기준
+      finalNos = remote;
+    }
+    finalNos.sort((a, b) => a - b);
+
+    window.cloudHooks.applyFavs(finalNos);
+    if(remote === null || !sameSet(finalNos, remote)){
+      await setDoc(favRef(user.uid), { favs: finalNos, updatedAt: Date.now() });
+    }
+    localStorage.setItem(SYNC_KEY, user.uid);
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    window.cloudHooks.onUser(user);
+    if(user){
+      try{ await pullAndMerge(user); }
+      catch(e){ console.warn('클라우드 동기화 실패', e); alert('즐겨찾기를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+    }
+  });
+
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState === 'visible' && currentUser){
+      try{ await pullAndMerge(currentUser); }catch(e){}
+    }
+  });
+
+  window.cloudAuthClick = async () => {
+    if(currentUser){
+      if(confirm('로그아웃 할까요?\n(이 기기에 저장된 즐겨찾기는 그대로 남아요)')){
+        await signOut(auth);
+      }
+      return;
+    }
+    try{
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    }catch(e){
+      if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+      if(e.code === 'auth/unauthorized-domain'){
+        alert('이 사이트 주소가 Firebase 승인 도메인에 없어요. Authentication > 설정 > 승인된 도메인에 사이트 도메인을 추가해 주세요.');
+      } else if(e.code === 'auth/popup-blocked'){
+        alert('팝업이 막혔어요. Safari 설정에서 팝업 차단을 끄고 다시 눌러 주세요.');
+      } else {
+        alert('로그인에 실패했어요. (' + (e.code || e.message) + ')');
+      }
+    }
+  };
+}catch(e){
+  console.warn('Firebase를 불러오지 못했어요. 로그인 없이 이 기기에만 저장돼요.', e);
+}
 </script>
 </body>
 </html>
