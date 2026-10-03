@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>영단어 마스터</title>
+<style>
+  :root{
+    --bg: #FFF8EE;
+    --card: #FFFFFF;
+    --primary: #FF7A1A;
+    --primary-dark: #E4650A;
+    --primary-light: #FFE7CC;
+    --accent: #FFC93C;
+    --text: #2B2118;
+    --sub: #9A8C7A;
+    --border: #F1E6D8;
+    --correct: #22B573;
+    --wrong: #EF4B5D;
+    --day-bg: #FFF1DE;
+    --star: #FF7A1A;
+    --shadow: 0 3px 14px rgba(120,80,20,.07);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text);
+    display:flex; justify-content:center;
+  }
+  #app{
+    width:100%; max-width:430px; min-height:100vh;
+    background:var(--bg); display:flex; flex-direction:column;
+    position:relative;
+  }
+  header{
+    padding:16px 18px 12px; background:var(--bg);
+    position:sticky; top:0; z-index:10;
+  }
+  .header-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand{display:flex; align-items:center; gap:9px; min-width:0;}
+  .brand-badge{
+    width:32px; height:32px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg, var(--primary), var(--accent));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 10px rgba(255,122,26,.32);
+  }
+  header h1{margin:0; font-size:17px; font-weight:800; letter-spacing:-.2px; white-space:nowrap;}
+  .fav-badge{
+    font-size:11px; font-weight:800; color:var(--primary-dark); background:var(--primary-light);
+    padding:6px 11px; border-radius:999px; flex-shrink:0;
+  }
+  header p{margin:8px 0 0; font-size:12px; color:var(--sub); font-weight:600;}
+
+  main{flex:1; padding:6px 14px 106px;}
+
+  nav.tabbar{
+    position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
+    width:calc(100% - 24px); max-width:406px; background:var(--card);
+    border-radius:20px; display:flex; z-index:20;
+    box-shadow:0 8px 24px rgba(120,80,20,.16);
+    padding:6px; gap:2px;
+  }
+  nav.tabbar button{
+    flex:1; border:none; background:none; padding:8px 2px 7px;
+    font-size:9.5px; color:var(--sub); font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    border-radius:14px; transition:background .15s, color .15s;
+  }
+  nav.tabbar button .ic{display:flex;}
+  nav.tabbar button.active{color:var(--primary-dark); background:var(--primary-light);}
+
+  .tabpage{display:none;}
+  .tabpage.active{display:block;}
+
+  .mode-switch{
+    display:flex; background:var(--card); box-shadow:var(--shadow);
+    border-radius:14px; padding:4px; margin-bottom:8px; gap:4px;
+  }
+  .mode-switch button{
+    flex:1; border:none; background:none; padding:9px 4px; font-size:11.5px;
+    font-weight:700; color:var(--sub); border-radius:11px; transition:background .15s,color .15s;
+  }
+  .mode-switch button.active{background:var(--primary); color:#fff;}
+
+  .spell-toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--card); box-shadow:var(--shadow); border-radius:14px;
+    padding:11px 14px; margin-bottom:10px; font-size:12.5px; font-weight:700; color:var(--text);
+  }
+
+  .day-block{
+    background:var(--card); border-radius:16px; overflow:hidden;
+    margin-bottom:10px; box-shadow:var(--shadow);
+  }
+  .day-header{
+    padding:13px 16px; display:flex; justify-content:space-between; align-items:center;
+    background:var(--day-bg); cursor:pointer;
+  }
+  .day-header .day-title{font-weight:800; font-size:14.5px; color:var(--primary-dark);}
+  .day-header .day-sub{font-size:11.5px; color:var(--sub); margin-top:2px;}
+  .day-header .chevron{font-size:13px; color:var(--primary); transition:transform .2s;}
+  .day-block.open .chevron{transform:rotate(180deg);}
+  .word-list{display:none;}
+  .day-block.open .word-list{display:block;}
+
+  .word-card{
+    padding:13px 16px; border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    cursor:pointer; user-select:none;
+  }
+  .word-card.expanded{align-items:flex-start;}
+  .word-card.expanded .star{margin-top:2px;}
+  .word-card:active{background:#FFFBF5;}
+  .word-card .no{
+    width:20px; font-size:10.5px; color:var(--sub); flex-shrink:0; text-align:center;
+  }
+  .word-face{flex:1; min-width:0;}
+  .word-face .en{font-size:15.5px; font-weight:800; color:var(--text);}
+  .word-face .kr{font-size:14px; font-weight:700; color:var(--primary-dark);}
+  .word-face .kr.sub-line{font-size:12px; color:var(--sub); font-weight:500; margin-top:2px;}
+
+  .spell-check-row{display:flex; gap:6px; margin-top:8px;}
+  .spell-check-input{
+    flex:1; padding:9px 11px; font-size:13px; border-radius:10px;
+    border:1.5px solid var(--border); outline:none; font-weight:600; color:var(--text);
+    background:var(--bg);
+  }
+  .spell-check-input:focus{border-color:var(--primary);}
+  .spell-check-input.correct{border-color:var(--correct); background:#EAFBF3;}
+  .spell-check-input.wrong{border-color:var(--wrong); background:#FDEEF0;}
+  .spell-check-btn{
+    padding:9px 13px; font-size:12.5px; font-weight:800; border-radius:10px;
+    border:none; background:var(--primary); color:#fff; flex-shrink:0;
+  }
+  .spell-check-feedback{margin-top:6px; font-size:12px; font-weight:700; display:none;}
+  .spell-check-feedback.show{display:block;}
+  .spell-check-feedback.correct{color:var(--correct);}
+  .spell-check-feedback.wrong{color:var(--wrong);}
+
+  .star{
+    font-size:20px; color:#E9DFD2; flex-shrink:0; line-height:1; padding:2px 4px;
+    transition:color .15s, transform .15s;
+  }
+  .star.active{color:var(--star); transform:scale(1.05);}
+
+  .fav-flat-list{
+    background:var(--card); border-radius:16px; overflow:hidden; box-shadow:var(--shadow);
+  }
+  .fav-flat-list .word-card{border-top:1px solid var(--border);}
+  .fav-flat-list .word-card:first-child{border-top:none;}
+  .empty-star{font-size:42px; color:#F2DFC4; margin-bottom:10px;}
+
+  /* ---------- Quiz setup ---------- */
+  .setup-card{
+    background:var(--card); border-radius:18px; padding:18px; box-shadow:var(--shadow);
+    margin-bottom:12px;
+  }
+  .setup-card h3{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--text);}
+  .setup-toolbar{display:flex; gap:8px; margin-bottom:10px;}
+  .setup-toolbar button{
+    flex:1; padding:9px; font-size:12px; font-weight:700; border-radius:10px;
+    border:1.5px solid var(--border); background:var(--bg); color:var(--sub);
+  }
+  .day-chip-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-bottom:4px;}
+  .day-chip{
+    padding:9px 2px; text-align:center; border-radius:10px; font-size:11.5px; font-weight:700;
+    border:1.5px solid var(--border); color:var(--sub); background:var(--bg);
+  }
+  .day-chip.active{background:var(--primary); border-color:var(--primary); color:#fff;}
+
+  .fav-only-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--border);
+  }
+  .fav-only-row span{font-size:13.5px; font-weight:700; color:var(--text);}
+  .switch{
+    width:44px; height:26px; border-radius:20px; background:var(--border);
+    position:relative; flex-shrink:0; transition:background .2s;
+  }
+  .switch.on{background:var(--primary);}
+  .switch .knob{
+    position:absolute; top:2px; left:2px; width:22px; height:22px; border-radius:50%;
+    background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.18);
+  }
+  .switch.on .knob{left:20px;}
+  .switch.small{width:34px; height:20px;}
+  .switch.small .knob{width:16px; height:16px;}
+  .switch.small.on .knob{left:16px;}
+
+  .pool-count{font-size:12px; color:var(--sub); margin-top:10px; text-align:center; font-weight:600;}
+
+  /* ---------- Quiz page ---------- */
+  .quiz-topbar{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
+  }
+  .quiz-stats{display:flex; gap:8px; font-size:11.5px; color:var(--sub); font-weight:700;}
+  .quiz-stats span{background:var(--card); box-shadow:var(--shadow); padding:5px 9px; border-radius:999px;}
+  .quiz-stats b{color:var(--text);}
+  .quiz-stats .ok{color:var(--correct);}
+  .quiz-stats .no{color:var(--wrong);}
+  .end-btn{
+    border:none; background:var(--card); color:var(--sub); box-shadow:var(--shadow);
+    font-size:11.5px; font-weight:700; padding:8px 13px; border-radius:12px;
+  }
+
+  .quiz-card{
+    background:var(--card); border-radius:18px; padding:22px 18px;
+    box-shadow:var(--shadow); margin-bottom:14px;
+  }
+  .quiz-card .label-row{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;
+  }
+  .quiz-card .label{
+    font-size:11px; color:var(--primary-dark); font-weight:800;
+    letter-spacing:.3px; background:var(--primary-light); padding:4px 9px; border-radius:999px;
+  }
+  .toggle-group{display:flex; gap:10px; flex-shrink:0;}
+  .trans-toggle{
+    display:flex; align-items:center; gap:6px; font-size:11px; color:var(--sub); font-weight:700;
+  }
+  .quiz-card .sentence{
+    font-size:16.5px; line-height:1.65; font-weight:700; color:var(--text);
+  }
+  .quiz-card .sentence .blank-slot{
+    display:inline-block; min-width:74px; border-bottom:2.5px solid var(--primary);
+    text-align:center; font-weight:800; color:var(--primary-dark);
+  }
+  .quiz-card .kr-trans{
+    margin-top:12px; font-size:13px; color:var(--sub); line-height:1.5;
+    padding-top:12px; border-top:1.5px dashed var(--border);
+  }
+  .quiz-card .hint-line{
+    margin-top:12px; font-size:12.5px; color:var(--primary-dark); font-weight:700;
+    background:var(--primary-light); display:inline-block; padding:6px 11px; border-radius:10px;
+  }
+
+  .answer-row{display:flex; gap:8px; margin-bottom:10px;}
+  .answer-row input{
+    flex:1; padding:14px 15px; font-size:16px; border-radius:14px;
+    border:1.5px solid var(--border); outline:none; font-weight:600;
+    color:var(--text); background:var(--card);
+  }
+  .answer-row input:focus{border-color:var(--primary);}
+  .answer-row input.correct{border-color:var(--correct); background:#EAFBF3;}
+  .answer-row input.wrong{border-color:var(--wrong); background:#FDEEF0;}
+
+  .btn{
+    padding:14px 16px; border-radius:14px; border:none; font-size:15px;
+    font-weight:800; cursor:pointer; transition:transform .1s, background .15s;
+  }
+  .btn-primary{background:var(--primary); color:#fff; width:100%; box-shadow:0 6px 16px rgba(255,122,26,.3);}
+  .btn-primary:active{background:var(--primary-dark); transform:scale(.98);}
+  .btn-secondary{background:var(--card); color:var(--primary-dark); width:100%; border:1.5px solid var(--primary-light); margin-top:8px;}
+
+  .choice-list{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+  .choice-btn{
+    padding:14px 15px; border-radius:14px; border:1.5px solid var(--border);
+    background:var(--card); font-size:14.5px; font-weight:700; color:var(--text);
+    text-align:left; transition:border-color .15s, background .15s;
+  }
+  .choice-btn:disabled{opacity:.9;}
+  .choice-btn.correct{border-color:var(--correct); background:#EAFBF3; color:var(--correct); font-weight:800;}
+  .choice-btn.wrong{border-color:var(--wrong); background:#FDEEF0; color:var(--wrong); font-weight:800;}
+
+  .feedback{
+    margin-top:10px; font-size:13.5px; font-weight:800; display:none;
+    padding:11px 13px; border-radius:12px;
+  }
+  .feedback.show{display:block;}
+  .feedback.correct{background:#EAFBF3; color:var(--correct);}
+  .feedback.wrong{background:#FDEEF0; color:var(--wrong);}
+  .feedback .ans{font-weight:800;}
+
+  .result-box{
+    text-align:center; padding:34px 16px; background:var(--card);
+    border-radius:18px; box-shadow:var(--shadow); margin-bottom:14px;
+  }
+  .result-box .big{font-size:26px; font-weight:900; color:var(--primary-dark); margin-bottom:16px;}
+  .result-summary{
+    display:flex; justify-content:center; gap:18px; margin-bottom:6px;
+  }
+  .result-summary div{font-size:12.5px; color:var(--sub); font-weight:600;}
+  .result-summary div b{display:block; font-size:20px; color:var(--text); margin-top:3px;}
+  .result-summary div.ok b{color:var(--correct);}
+  .result-summary div.no b{color:var(--wrong);}
+
+  .wrong-list-title{
+    font-size:13.5px; font-weight:800; margin:16px 2px 8px; color:var(--text);
+  }
+  .wrong-item{
+    background:var(--card); box-shadow:var(--shadow); border-radius:14px;
+    padding:13px 15px; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; margin-bottom:8px;
+  }
+  .wrong-item .wi-word{font-size:14.5px; font-weight:800; color:var(--text);}
+  .wrong-item .wi-meaning{font-size:12px; color:var(--sub); margin-top:2px;}
+  .wrong-item .wi-answer{font-size:11.5px; color:var(--wrong); margin-top:3px; font-weight:600;}
+
+  .empty-note{
+    text-align:center; color:var(--sub); font-size:13px; padding:50px 10px; font-weight:600;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+    <header>
+    <div class="header-row">
+      <div class="brand">
+        <span class="brand-badge"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5c-1.6-1-4-1.5-6-1.2C4.9 5.4 4 6.2 4 7.2v10.3c0 .8.8 1.3 1.6 1.1 1.9-.4 4-.1 5.6.9V6.5Z"/><path d="M12 6.5c1.6-1 4-1.5 6-1.2 1.1.2 2 1 2 2v10.3c0 .8-.8 1.3-1.6 1.1-1.9-.4-4-.1-5.6.9V6.5Z"/></svg></span>
+        <h1>영단어 마스터</h1>
+      </div>
+      <span class="fav-badge" id="favBadge">즐겨찾기 0</span>
+    </div>
+    <p id="headerSub">DAY 21~28, 39~50 · 600 단어</p>
+  </header>
+
+  <main>
+    <!-- ================= TAB 1: 단어장 ================= -->
+    <section id="page-list" class="tabpage active">
+      <div class="mode-switch" id="modeSwitchList">
+        <button data-mode="meaning" onclick="setDisplayMode('meaning')">뜻 먼저</button>
+        <button data-mode="word" class="active" onclick="setDisplayMode('word')">영단어 먼저</button>
+        <button data-mode="both" onclick="setDisplayMode('both')">둘 다 보기</button>
+      </div>
+      <div class="spell-toggle-row" id="spellToggleRowList" style="display:none;">
+        <span>뜻 보고 스펠링 확인하기</span>
+        <div class="switch" id="spellToggleSwitchList" onclick="toggleSpellingTest()"><div class="knob"></div></div>
+      </div>
+      <div id="dayContainer"></div>
+    </section>
+
+    <!-- ================= TAB 2: 즐겨찾기 ================= -->
+    <section id="page-fav" class="tabpage">
+      <div class="mode-switch">
+        <button data-mode="meaning" onclick="setDisplayMode('meaning')">뜻 먼저</button>
+        <button data-mode="word" class="active" onclick="setDisplayMode('word')">영단어 먼저</button>
+        <button data-mode="both" onclick="setDisplayMode('both')">둘 다 보기</button>
+      </div>
+      <div class="spell-toggle-row" id="spellToggleRowFav" style="display:none;">
+        <span>뜻 보고 스펠링 확인하기</span>
+        <div class="switch" id="spellToggleSwitchFav" onclick="toggleSpellingTest()"><div class="knob"></div></div>
+      </div>
+      <div id="favContainer"></div>
+    </section>
+
+    <!-- ================= TAB 3: 빈칸연습 ================= -->
+    <section id="page-quiz" class="tabpage">
+      <div id="quizArea"></div>
+    </section>
+
+    <!-- ================= TAB 4: 스펠링연습 ================= -->
+    <section id="page-spell" class="tabpage">
+      <div id="spellArea"></div>
+    </section>
+
+    <!-- ================= TAB 5: 뜻고르기(5지선다) ================= -->
+    <section id="page-choice" class="tabpage">
+      <div id="choiceArea"></div>
+    </section>
+  </main>
+
+    <nav class="tabbar">
+    <button id="tabBtnList" class="active" onclick="switchTab('list')">
+      <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5c-1.6-1-4-1.5-6-1.2C4.9 5.4 4 6.2 4 7.2v10.3c0 .8.8 1.3 1.6 1.1 1.9-.4 4-.1 5.6.9V6.5Z"/><path d="M12 6.5c1.6-1 4-1.5 6-1.2 1.1.2 2 1 2 2v10.3c0 .8-.8 1.3-1.6 1.1-1.9-.4-4-.1-5.6.9V6.5Z"/></svg></span>단어장
+    </button>
+    <button id="tabBtnFav" onclick="switchTab('fav')">
+      <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.47 5.01 5.53.8-4 3.9.95 5.5L12 16.9l-4.95 2.6.95-5.5-4-3.9 5.53-.8L12 3.5Z"/></svg></span>즐겨찾기
+    </button>
+    <button id="tabBtnQuiz" onclick="switchTab('blank')">
+      <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4.2L15.6 5.2a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1L8.2 19 4 20Z"/><path d="M13.5 7.3l3.2 3.2"/></svg></span>빈칸
+    </button>
+    <button id="tabBtnSpell" onclick="switchTab('spell')">
+      <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6.5" width="17" height="11" rx="2.5"/><path d="M7 10h.01M10.5 10h.01M14 10h.01M17.5 10h.01M8 14.2h8"/></svg></span>스펠링
+    </button>
+    <button id="tabBtnChoice" onclick="switchTab('choice')">
+      <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg></span>뜻고르기
+    </button>
+  </nav>
+
+</div>
+
+<script>
+/* =======================================================
+   1. 단어 데이터 (600단어, DAY 21~28, 39~50)
+   ======================================================= */
+const wordData = [{"no": 1, "day": "DAY 21", "word": "circuit", "meaning": "순회; 주위, 둘레; [전기] 회로", "example": "The runners made two circuits of the track.", "answer": "circuits", "kr": "그 주자들은 트랙을 두 바퀴 돌았다.", "fav": false}, {"no": 2, "day": "DAY 21", "word": "circulate", "meaning": "순환하다[시키다]; (소문 등이) 퍼지다; 배포하다", "example": "Blood circulates around the body.", "answer": "circulates", "kr": "혈액은 몸 전체를 순환한다.", "fav": false}, {"no": 3, "day": "DAY 21", "word": "circular", "meaning": "원형의, 둥근; 순회하는, 순환하는", "example": "There are a lot of circular buildings in the region.", "answer": "circular", "kr": "그 지역에는 원형 건물이 많다.", "fav": false}, {"no": 4, "day": "DAY 21", "word": "cite", "meaning": "인용하다; 언급하다; (법정으로) 소환하다", "example": "She cited the Constitution's liberty clause.", "answer": "cited", "kr": "그녀는 헌법의 자유 조항을 인용했다.", "fav": false}, {"no": 5, "day": "DAY 21", "word": "recite", "meaning": "암송하다, 낭독[낭송]하다", "example": "She flawlessly recited the poem.", "answer": "recited", "kr": "그녀는 그 시를 완벽하게 암송했다.", "fav": false}, {"no": 6, "day": "DAY 21", "word": "civil", "meaning": "시민의; 민간인의; [법률] 민사의", "example": "We should protect civil liberty and equality.", "answer": "civil", "kr": "우리는 시민의 자유와 평등을 보호해야 한다.", "fav": false}, {"no": 7, "day": "DAY 21", "word": "civilize", "meaning": "문명화하다", "example": "They civilized the primitive tribe.", "answer": "civilized", "kr": "그들은 그 원시 부족을 문명화했다.", "fav": false}, {"no": 8, "day": "DAY 21", "word": "council", "meaning": "지방 의회; 평의회, 협의회", "example": "The council deferred the discussion until the next meeting.", "answer": "council", "kr": "그 의회는 논의를 다음 회의까지 미루었다.", "fav": false}, {"no": 9, "day": "DAY 21", "word": "proclaim", "meaning": "선언하다, 공표하다", "example": "The governor proclaimed a state of emergency last night.", "answer": "proclaimed", "kr": "주지사는 어젯밤 비상사태를 선포했다.", "fav": false}, {"no": 10, "day": "DAY 21", "word": "acquaintance", "meaning": "아는 사람, 지인; 면식; 지식", "example": "I don't know her well. She's just an acquaintance.", "answer": "acquaintance", "kr": "나는 그녀를 잘 모른다. 그녀는 그냥 아는 사람일 뿐이다.", "fav": false}, {"no": 11, "day": "DAY 21", "word": "diagnose", "meaning": "진단하다, (병 등의) 원인을 규명하다", "example": "The patient was diagnosed with high blood pressure.", "answer": "diagnosed", "kr": "그 환자는 고혈압 진단을 받았다.", "fav": false}, {"no": 12, "day": "DAY 21", "word": "accord", "meaning": "일치하다[시키다], 조화하다[시키다]; 일치, 합의; 협정", "example": "Your opinion is out of accord with mine.", "answer": "accord", "kr": "네 의견은 내 의견과 일치하지 않는다.", "fav": false}, {"no": 13, "day": "DAY 21", "word": "core", "meaning": "핵심, 가장 중요한 부분; 중심부; 핵심의, 가장 중요한", "example": "He has the ability to identify the core of every issue.", "answer": "core", "kr": "그는 모든 문제의 핵심을 파악하는 능력이 있다.", "fav": false}, {"no": 14, "day": "DAY 21", "word": "discord", "meaning": "불화, 불일치; 불협화음", "example": "A small matter can cause friction and discord within a group.", "answer": "discord", "kr": "작은 일이 집단 내에 마찰과 불화를 일으킬 수 있다.", "fav": false}, {"no": 15, "day": "DAY 21", "word": "concrete", "meaning": "구체적인; 콘크리트로 만든; 콘크리트", "example": "The plan needs more concrete details.", "answer": "concrete", "kr": "그 계획은 더 구체적인 세부사항이 필요하다.", "fav": false}, {"no": 16, "day": "DAY 21", "word": "recreate", "meaning": "되살리다, 재현하다", "example": "The Japanese restaurant tried to recreate the atmosphere of Japan.", "answer": "recreate", "kr": "그 일본 식당은 일본의 분위기를 재현하려 했다.", "fav": false}, {"no": 17, "day": "DAY 21", "word": "recruit", "meaning": "(신입 사원·신병 등을) 모집하다; 신병; 새로운 구성원", "example": "We are recruiting graduates to join our team.", "answer": "recruiting", "kr": "우리는 우리 팀에 합류할 졸업생들을 모집하고 있다.", "fav": false}, {"no": 18, "day": "DAY 21", "word": "fatal", "meaning": "치명적인, 죽음에 이르게 하는", "example": "We all hope that his cancer won't be fatal.", "answer": "fatal", "kr": "우리는 모두 그의 암이 치명적이지 않기를 바란다.", "fav": false}, {"no": 19, "day": "DAY 21", "word": "infancy", "meaning": "유아기; 초기 (단계)", "example": "Aerospace technology is still in its infancy in Korea.", "answer": "infancy", "kr": "한국에서 항공우주 기술은 아직 초기 단계이다.", "fav": false}, {"no": 20, "day": "DAY 21", "word": "profess", "meaning": "공언하다, 단언하다", "example": "In the end, she professed herself to be bankrupt.", "answer": "professed", "kr": "결국 그녀는 자신이 파산했다고 공언했다.", "fav": false}, {"no": 21, "day": "DAY 21", "word": "edition", "meaning": "(출판물의) 판(版)", "example": "Can I get the revised edition of this book?", "answer": "edition", "kr": "이 책의 개정판을 구할 수 있을까요?", "fav": false}, {"no": 22, "day": "DAY 21", "word": "render", "meaning": "~한 상태로 만들다; (도움 등을) 주다, 제공하다", "example": "His alcoholism rendered him powerless.", "answer": "rendered", "kr": "그의 알코올 중독은 그를 무기력하게 만들었다.", "fav": false}, {"no": 23, "day": "DAY 21", "word": "surrender", "meaning": "항복하다; 양도하다; 항복; 양도", "example": "After a long battle, they surrendered to the enemy.", "answer": "surrendered", "kr": "긴 전투 끝에 그들은 적에게 항복했다.", "fav": false}, {"no": 24, "day": "DAY 21", "word": "assure", "meaning": "보증하다, 장담하다; 확실하게 하다", "example": "I assure you that she is innocent.", "answer": "assure", "kr": "나는 그녀가 결백하다고 장담한다.", "fav": false}, {"no": 25, "day": "DAY 21", "word": "ensure", "meaning": "반드시 ~하게 하다, 보장하다", "example": "The country should ensure the safety of its citizens.", "answer": "ensure", "kr": "국가는 시민의 안전을 보장해야 한다.", "fav": false}, {"no": 26, "day": "DAY 21", "word": "insure", "meaning": "보험에 가입하다", "example": "She decided to insure her house against fire.", "answer": "insure", "kr": "그녀는 화재에 대비해 집에 보험을 들기로 했다.", "fav": false}, {"no": 27, "day": "DAY 21", "word": "contradict", "meaning": "모순되다; 반박하다, 부정하다", "example": "The statements of the two witnesses contradicted each other.", "answer": "contradicted", "kr": "두 목격자의 진술은 서로 모순되었다.", "fav": false}, {"no": 28, "day": "DAY 21", "word": "dictate", "meaning": "받아쓰게 하다; 명령하다, 지시하다", "example": "The old man dictated a letter to his granddaughter.", "answer": "dictated", "kr": "그 노인은 손녀에게 편지를 받아쓰게 했다.", "fav": false}, {"no": 29, "day": "DAY 21", "word": "presume", "meaning": "가정하다, 추정하다", "example": "They presumed the damage resulted from the storm.", "answer": "presumed", "kr": "그들은 그 피해가 폭풍 때문에 발생했다고 추정했다.", "fav": false}, {"no": 30, "day": "DAY 21", "word": "resume", "meaning": "다시 시작하다; 되찾다; 이력서", "example": "I want to resume work after I go abroad to study.", "answer": "resume", "kr": "나는 유학을 다녀온 후 일을 다시 시작하고 싶다.", "fav": false}, {"no": 31, "day": "DAY 22", "word": "attract", "meaning": "끌다, 유인하다, 매혹하다", "example": "He attracted my attention by waving at me.", "answer": "attracted", "kr": "그는 나에게 손을 흔들어 내 주의를 끌었다.", "fav": false}, {"no": 32, "day": "DAY 22", "word": "trail", "meaning": "(질질) 끌다[끌리다]; 추적하다; 오솔길; 자국, 흔적", "example": "Your long skirt is trailing on the floor.", "answer": "trailing", "kr": "네 긴 치마가 바닥에 끌리고 있어.", "fav": false}, {"no": 33, "day": "DAY 22", "word": "distract", "meaning": "(마음·주의 등을) 흐트러뜨리다, 산만하게 하다", "example": "Don't distract me while I am studying.", "answer": "distract", "kr": "공부하는 동안 나를 방해하지 마.", "fav": false}, {"no": 34, "day": "DAY 22", "word": "abstract", "meaning": "추상적인; 이론적인; 추출하다; 요약하다; 추상; 요약", "example": "Beauty is an abstract concept.", "answer": "abstract", "kr": "아름다움은 추상적인 개념이다.", "fav": false}, {"no": 35, "day": "DAY 22", "word": "extract", "meaning": "뽑다, 추출하다; 발췌하다; 발췌; 추출(물)", "example": "The dentist extracted my wisdom tooth.", "answer": "extracted", "kr": "치과의사가 내 사랑니를 뽑았다.", "fav": false}, {"no": 36, "day": "DAY 22", "word": "portrait", "meaning": "초상(화), 인물 사진; 묘사", "example": "The artist painted a portrait of the king.", "answer": "portrait", "kr": "그 화가는 왕의 초상화를 그렸다.", "fav": false}, {"no": 37, "day": "DAY 22", "word": "trace", "meaning": "자취, 흔적; 추적하다; (원인·유래 등을) 밝혀내다", "example": "One day, he suddenly disappeared without a trace.", "answer": "trace", "kr": "어느 날 그는 흔적도 없이 갑자기 사라졌다.", "fav": false}, {"no": 38, "day": "DAY 22", "word": "treaty", "meaning": "조약, 협정", "example": "Japan signed a security treaty with the United States.", "answer": "treaty", "kr": "일본은 미국과 안보 조약을 체결했다.", "fav": false}, {"no": 39, "day": "DAY 22", "word": "fiction", "meaning": "소설; 꾸며낸 이야기, 허구", "example": "I enjoy watching science fiction movies.", "answer": "fiction", "kr": "나는 공상과학 영화 보는 것을 즐긴다.", "fav": false}, {"no": 40, "day": "DAY 22", "word": "defect", "meaning": "결점, 결함", "example": "The cars with defects were all recalled for repairs.", "answer": "defects", "kr": "결함이 있는 차들은 모두 수리를 위해 리콜되었다.", "fav": false}, {"no": 41, "day": "DAY 22", "word": "proficient", "meaning": "능숙한, 숙달된", "example": "He is proficient at computer programming.", "answer": "proficient", "kr": "그는 컴퓨터 프로그래밍에 능숙하다.", "fav": false}, {"no": 42, "day": "DAY 22", "word": "qualify", "meaning": "자격[권한]을 주다[얻다], 적임이다", "example": "She is well qualified for this position because of her experience.", "answer": "qualified", "kr": "그녀는 경력 덕분에 이 자리에 적임자다.", "fav": false}, {"no": 43, "day": "DAY 22", "word": "sufficient", "meaning": "충분한", "example": "Many communities still don't have a sufficient amount of clean water for everyone in them.", "answer": "sufficient", "kr": "많은 지역사회에는 아직도 모든 사람에게 충분한 양의 깨끗한 물이 없다.", "fav": false}, {"no": 44, "day": "DAY 22", "word": "colony", "meaning": "식민지; 집단", "example": "Singapore was formerly a British colony.", "answer": "colony", "kr": "싱가포르는 예전에 영국의 식민지였다.", "fav": false}, {"no": 45, "day": "DAY 22", "word": "cultivate", "meaning": "경작하다, 재배하다; (능력 등을) 양성하다, 계발하다", "example": "The desert is not suitable for cultivating crops and trees.", "answer": "cultivating", "kr": "그 사막은 작물과 나무를 재배하기에 적합하지 않다.", "fav": false}, {"no": 46, "day": "DAY 22", "word": "agriculture", "meaning": "농업, 농경", "example": "The country's economy relies on agriculture.", "answer": "agriculture", "kr": "그 나라의 경제는 농업에 의존한다.", "fav": false}, {"no": 47, "day": "DAY 22", "word": "conflict", "meaning": "대립, 충돌; 싸움; 대립하다, 충돌하다", "example": "The conflict between the two parties is getting worse.", "answer": "conflict", "kr": "두 당사자 간의 대립이 점점 악화되고 있다.", "fav": false}, {"no": 48, "day": "DAY 22", "word": "inflict", "meaning": "(고통·타격 등을) 가하다, (벌 등을) 주다", "example": "His parents didn't inflict any punishment on him.", "answer": "inflict", "kr": "그의 부모는 그에게 어떤 벌도 가하지 않았다.", "fav": false}, {"no": 49, "day": "DAY 22", "word": "fort", "meaning": "요새, 보루", "example": "The soldiers retreated into the fort for shelter.", "answer": "fort", "kr": "군인들은 대피를 위해 요새로 후퇴했다.", "fav": false}, {"no": 50, "day": "DAY 22", "word": "force", "meaning": "억지로 ~하게 하다, 강요하다; 힘; 폭력; ((the ~s)) 군대", "example": "They forced me to issue an apology for what I said.", "answer": "forced", "kr": "그들은 내가 한 말에 대해 사과하도록 강요했다.", "fav": false}, {"no": 51, "day": "DAY 22", "word": "reinforce", "meaning": "강화하다, 증강하다, 보강하다", "example": "Last month, our country reinforced security checks at its borders.", "answer": "reinforced", "kr": "지난달 우리나라는 국경 보안 검사를 강화했다.", "fav": false}, {"no": 52, "day": "DAY 22", "word": "warfare", "meaning": "전쟁, 전투, 싸움", "example": "The young men of the city were trained in the art of warfare.", "answer": "warfare", "kr": "그 도시의 젊은이들은 전쟁의 기술을 훈련받았다.", "fav": false}, {"no": 53, "day": "DAY 22", "word": "welfare", "meaning": "복지, 복리, 행복", "example": "Denmark has a good social welfare system.", "answer": "welfare", "kr": "덴마크는 좋은 사회 복지 제도를 갖고 있다.", "fav": false}, {"no": 54, "day": "DAY 22", "word": "confer", "meaning": "협의하다, 의논하다; (상·명예 등을) 수여하다, 주다", "example": "A law degree was conferred on the students.", "answer": "conferred", "kr": "학생들에게 학위가 수여되었다.", "fav": false}, {"no": 55, "day": "DAY 22", "word": "infer", "meaning": "추론하다, 추측하다", "example": "From the evidence, the police inferred that the killer knew the victim.", "answer": "inferred", "kr": "증거를 통해 경찰은 살인범이 피해자를 알고 있었다고 추론했다.", "fav": false}, {"no": 56, "day": "DAY 22", "word": "fertile", "meaning": "기름진, 비옥한; 다산의, 번식력이 있는", "example": "The soil here is fertile enough to provide half of the nation's crops.", "answer": "fertile", "kr": "이곳의 토양은 그 나라 농작물의 절반을 제공할 만큼 비옥하다.", "fav": false}, {"no": 57, "day": "DAY 22", "word": "confine", "meaning": "한정하다, 제한하다; 가두다, 감금하다", "example": "I don't like to be confined to the house all day.", "answer": "confined", "kr": "나는 하루 종일 집에 갇혀 있는 것을 좋아하지 않는다.", "fav": false}, {"no": 58, "day": "DAY 22", "word": "define", "meaning": "정의하다; (범위·경계 등을) 규정하다", "example": "Democracy is often defined as the “rule of the majority.”", "answer": "defined", "kr": "민주주의는 흔히 '다수의 지배'로 정의된다.", "fav": false}, {"no": 59, "day": "DAY 22", "word": "infinite", "meaning": "무한한", "example": "Human beings' greed is infinite.", "answer": "infinite", "kr": "인간의 탐욕은 끝이 없다.", "fav": false}, {"no": 60, "day": "DAY 22", "word": "refine", "meaning": "정제하다; 개선하다, 다듬다", "example": "Oil needs to be refined before it can be used.", "answer": "refined", "kr": "석유는 사용되기 전에 정제되어야 한다.", "fav": false}, {"no": 61, "day": "DAY 23", "word": "fraction", "meaning": "일부, 소량; [수학] 분수", "example": "The used car was sold at only a fraction of its true value.", "answer": "fraction", "kr": "그 중고차는 실제 가치의 일부에 불과한 가격에 팔렸다.", "fav": false}, {"no": 62, "day": "DAY 23", "word": "fragile", "meaning": "깨지기 쉬운, 부서지기 쉬운; (체질이) 허약한", "example": "Handle the fragile glasses carefully.", "answer": "fragile", "kr": "깨지기 쉬운 유리잔들을 조심스럽게 다루어라.", "fav": false}, {"no": 63, "day": "DAY 23", "word": "fragment", "meaning": "파편, 조각; 산산이 부수다[부서지다]", "example": "Fragments of glass fell everywhere.", "answer": "Fragments", "kr": "유리 파편이 사방에 떨어졌다.", "fav": false}, {"no": 64, "day": "DAY 23", "word": "fundamental", "meaning": "근본적인, 기본적인; 중요한, 필수의", "example": "Continuous innovation has become fundamental for companies to survive.", "answer": "fundamental", "kr": "끊임없는 혁신은 기업이 살아남기 위한 필수 요소가 되었다.", "fav": false}, {"no": 65, "day": "DAY 23", "word": "profound", "meaning": "(영향·효과 등이) 강한; (사상·의미 등이) 심오한; 깊은", "example": "His book is too profound for me to understand.", "answer": "profound", "kr": "그의 책은 내가 이해하기에는 너무 심오하다.", "fav": false}, {"no": 66, "day": "DAY 23", "word": "fusion", "meaning": "융합, 결합", "example": "This restaurant specializes in fusion cuisine, blending Eastern and Western food.", "answer": "fusion", "kr": "이 식당은 동서양 음식을 접목한 퓨전 요리를 전문으로 한다.", "fav": false}, {"no": 67, "day": "DAY 23", "word": "futile", "meaning": "쓸모없는, 무익한", "example": "She accepted that it was futile to try to compete with him.", "answer": "futile", "kr": "그녀는 그와 경쟁하려는 것이 헛된 일임을 받아들였다.", "fav": false}, {"no": 68, "day": "DAY 23", "word": "garment", "meaning": "의류 (한 점)", "example": "Gently launder this garment by hand with a neutral detergent.", "answer": "garment", "kr": "이 옷은 중성 세제로 손세탁해 주세요.", "fav": false}, {"no": 69, "day": "DAY 23", "word": "grace", "meaning": "우아함; 품위; (신의) 은혜, 은총", "example": "Julie accepted her loss with grace, congratulating the winner.", "answer": "grace", "kr": "줄리는 우아하게 패배를 받아들이며 우승자를 축하했다.", "fav": false}, {"no": 70, "day": "DAY 23", "word": "gratitude", "meaning": "감사(의 마음)", "example": "They accepted his offer with gratitude.", "answer": "gratitude", "kr": "그들은 감사하는 마음으로 그의 제안을 받아들였다.", "fav": false}, {"no": 71, "day": "DAY 23", "word": "habitat", "meaning": "서식지, 거주지", "example": "The habitat for wild animals is getting smaller and smaller.", "answer": "habitat", "kr": "야생동물의 서식지가 점점 줄어들고 있다.", "fav": false}, {"no": 72, "day": "DAY 23", "word": "inhabit", "meaning": "~에 살다, 서식하다", "example": "Many species of rare animals and plants inhabit the jungle.", "answer": "inhabit", "kr": "희귀한 동식물의 많은 종이 그 정글에 서식한다.", "fav": false}, {"no": 73, "day": "DAY 23", "word": "inject", "meaning": "주입하다, 주사하다", "example": "The nurse injected some medicine into my arm.", "answer": "injected", "kr": "간호사가 내 팔에 약을 주사했다.", "fav": false}, {"no": 74, "day": "DAY 23", "word": "project", "meaning": "프로젝트, 계획; 예상[추정]하다; 투영하다; 계획하다; 돌출", "example": "He finished the project successfully.", "answer": "project", "kr": "그는 그 프로젝트를 성공적으로 끝냈다.", "fav": false}, {"no": 75, "day": "DAY 23", "word": "justify", "meaning": "정당화하다", "example": "No words can justify my actions.", "answer": "justify", "kr": "어떤 말로도 내 행동을 정당화할 수 없다.", "fav": false}, {"no": 76, "day": "DAY 23", "word": "prejudice", "meaning": "편견, 선입관; 편견을 갖게 하다", "example": "Some people have a prejudice against people of other cultures.", "answer": "prejudice", "kr": "어떤 사람들은 다른 문화권 사람들에 대한 편견을 갖고 있다.", "fav": false}, {"no": 77, "day": "DAY 23", "word": "arrest", "meaning": "체포; 체포하다", "example": "They arrested him for theft and gun possession.", "answer": "arrested", "kr": "그들은 절도와 총기 소지 혐의로 그를 체포했다.", "fav": false}, {"no": 78, "day": "DAY 23", "word": "constant", "meaning": "끊임없는; 불변의; 불변(의 것); [수학] 상수", "example": "Her success was the constant result of her efforts.", "answer": "constant", "kr": "그녀의 성공은 끊임없는 노력의 결과였다.", "fav": false}, {"no": 79, "day": "DAY 23", "word": "institute", "meaning": "학회, 협회; (제도·절차 등을) 제정하다, 도입하다", "example": "The school instituted the rule to reduce cheating.", "answer": "instituted", "kr": "그 학교는 부정행위를 줄이기 위해 규칙을 제정했다.", "fav": false}, {"no": 80, "day": "DAY 23", "word": "estate", "meaning": "재산; 토지, 사유지", "example": "The real estate market is in a downward trend.", "answer": "estate", "kr": "부동산 시장은 하락세에 있다.", "fav": false}, {"no": 81, "day": "DAY 23", "word": "destined", "meaning": "~할 운명의, ~하기로 되어 있는; ((~ for)) ~행의", "example": "She was never destined to come back to her hometown.", "answer": "destined", "kr": "그녀는 고향으로 돌아올 운명이 결코 아니었다.", "fav": false}, {"no": 82, "day": "DAY 23", "word": "assist", "meaning": "돕다, 거들다; [스포츠] 어시스트", "example": "They are raising funds to assist the flood victims.", "answer": "assist", "kr": "그들은 수해 피해자들을 돕기 위해 기금을 모으고 있다.", "fav": false}, {"no": 83, "day": "DAY 23", "word": "constitute", "meaning": "구성하다; ~로 간주되다; 설립하다", "example": "Wisconsin is one of the 50 states that constitute the USA.", "answer": "constitute", "kr": "위스콘신주는 미국을 구성하는 50개 주 중 하나이다.", "fav": false}, {"no": 84, "day": "DAY 23", "word": "substitute", "meaning": "대용품, 대리인; 대체하다; (일을) 대신하다", "example": "Ethanol can be used as a substitute for gasoline in vehicles.", "answer": "substitute", "kr": "에탄올은 차량용 휘발유의 대체재로 사용될 수 있다.", "fav": false}, {"no": 85, "day": "DAY 23", "word": "obstacle", "meaning": "장애(물), 방해(물)", "example": "An obstacle kept them from progressing any further.", "answer": "obstacle", "kr": "장애물 하나가 그들이 더 나아가지 못하게 막았다.", "fav": false}, {"no": 86, "day": "DAY 23", "word": "stable", "meaning": "안정된; 침착한; 마구간", "example": "Our company's financial condition is very stable.", "answer": "stable", "kr": "우리 회사의 재정 상태는 매우 안정적이다.", "fav": false}, {"no": 87, "day": "DAY 23", "word": "statistics", "meaning": "통계(치); 통계학", "example": "These statistics show the number of people involved in education.", "answer": "statistics", "kr": "이 통계는 교육에 관련된 사람들의 수를 보여준다.", "fav": false}, {"no": 88, "day": "DAY 23", "word": "steady", "meaning": "꾸준한; 안정된", "example": "There is a steady increase in the number of tourists.", "answer": "steady", "kr": "관광객 수가 꾸준히 증가하고 있다.", "fav": false}, {"no": 89, "day": "DAY 23", "word": "substance", "meaning": "물질; 본질, 실체; 요지", "example": "Alcohol is a dangerous substance for children.", "answer": "substance", "kr": "알코올은 어린이에게 위험한 물질이다.", "fav": false}, {"no": 90, "day": "DAY 23", "word": "superstition", "meaning": "미신", "example": "Many players believe in superstitions about uniform numbers.", "answer": "superstitions", "kr": "많은 선수들이 등번호에 대한 미신을 믿는다.", "fav": false}, {"no": 91, "day": "DAY 24", "word": "elaborate", "meaning": "정교한, 정성 들인; 상세히 말하다; 갈고 다듬다", "example": "Her blouse has an elaborate pattern of birds on it.", "answer": "elaborate", "kr": "그녀의 블라우스에는 새들이 그려진 정교한 무늬가 있다.", "fav": false}, {"no": 92, "day": "DAY 24", "word": "collaborate", "meaning": "공동으로 일하다, 협력하다", "example": "My company is collaborating with an Indian company on this project.", "answer": "collaborating", "kr": "우리 회사는 이 프로젝트에서 한 인도 회사와 협력하고 있다.", "fav": false}, {"no": 93, "day": "DAY 24", "word": "laboratory", "meaning": "실험실, 연구실", "example": "Several experiments are being conducted in the laboratory.", "answer": "laboratory", "kr": "여러 실험이 실험실에서 진행되고 있다.", "fav": false}, {"no": 94, "day": "DAY 24", "word": "inspect", "meaning": "점검하다, 검사하다; 시찰하다, 감사하다", "example": "I had my baggage inspected before boarding the plane.", "answer": "inspected", "kr": "나는 비행기 탑승 전에 짐 검사를 받았다.", "fav": false}, {"no": 95, "day": "DAY 24", "word": "spectacle", "meaning": "구경거리, 장관; ((~s)) 안경", "example": "The opening ceremony was quite a spectacle.", "answer": "spectacle", "kr": "개막식은 정말 장관이었다.", "fav": false}, {"no": 96, "day": "DAY 24", "word": "suspect", "meaning": "의심하다, ~라고 생각하다; 용의자", "example": "He is suspected of committing the crime.", "answer": "suspected", "kr": "그는 범죄를 저질렀다는 의심을 받고 있다.", "fav": false}, {"no": 97, "day": "DAY 24", "word": "tense", "meaning": "긴장한; 팽팽한; [문법] 시제", "example": "I take a deep breath when I feel tense.", "answer": "tense", "kr": "나는 긴장될 때 깊게 숨을 쉰다.", "fav": false}, {"no": 98, "day": "DAY 24", "word": "tender", "meaning": "(음식이) 연한; 다정한; 제출하다, 제공하다; 입찰하다", "example": "The steak is tender and juicy.", "answer": "tender", "kr": "그 스테이크는 연하고 육즙이 많다.", "fav": false}, {"no": 99, "day": "DAY 24", "word": "intend", "meaning": "의도하다; ~할 작정이다", "example": "I don't know what he intended in his article.", "answer": "intended", "kr": "나는 그가 자신의 기사에서 무엇을 의도했는지 모르겠다.", "fav": false}, {"no": 100, "day": "DAY 24", "word": "intense", "meaning": "강렬한; 치열한; 열심인", "example": "Competition for the job was intense.", "answer": "intense", "kr": "그 일자리를 위한 경쟁은 치열했다.", "fav": false}, {"no": 101, "day": "DAY 24", "word": "tend", "meaning": "~하는 경향이 있다, ~하기 쉽다; 돌보다, 보살피다", "example": "She tends to eat too much if she eats meat.", "answer": "tends", "kr": "그녀는 고기를 먹으면 너무 많이 먹는 경향이 있다.", "fav": false}, {"no": 102, "day": "DAY 24", "word": "evaluate", "meaning": "평가하다, 견적을 내다", "example": "The company evaluates its employees' performance once a year.", "answer": "evaluates", "kr": "그 회사는 1년에 한 번 직원들의 성과를 평가한다.", "fav": false}, {"no": 103, "day": "DAY 24", "word": "valid", "meaning": "타당한; 유효한", "example": "I have valid reasons why I disagreed with him.", "answer": "valid", "kr": "내가 그에게 동의하지 않은 데는 타당한 이유가 있다.", "fav": false}, {"no": 104, "day": "DAY 24", "word": "equivalent", "meaning": "동등한, 대등한; ~에 상당하는; 동등한 것", "example": "He received a bonus equivalent to three months' pay.", "answer": "equivalent", "kr": "그는 석 달치 급여에 상당하는 보너스를 받았다.", "fav": false}, {"no": 105, "day": "DAY 24", "word": "colleague", "meaning": "(직장) 동료", "example": "She established good relationships with her colleagues.", "answer": "colleagues", "kr": "그녀는 동료들과 좋은 관계를 맺었다.", "fav": false}, {"no": 106, "day": "DAY 24", "word": "privilege", "meaning": "특권, 특전; 특권을 주다", "example": "If you have a membership card, you can enjoy a lot of special privileges.", "answer": "privileges", "kr": "멤버십 카드가 있으면 많은 특별 혜택을 누릴 수 있다.", "fav": false}, {"no": 107, "day": "DAY 24", "word": "liberal", "meaning": "개방적인, 편견 없는; 자유주의의; 후한, 인색하지 않은", "example": "She has a liberal attitude toward immigration.", "answer": "liberal", "kr": "그녀는 이민에 대해 개방적인 태도를 갖고 있다.", "fav": false}, {"no": 108, "day": "DAY 24", "word": "preliminary", "meaning": "예비의, 준비의; 예비 단계; 예선", "example": "Several candidates passed the preliminary round of interviews.", "answer": "preliminary", "kr": "여러 후보자가 예비 면접 라운드를 통과했다.", "fav": false}, {"no": 109, "day": "DAY 24", "word": "ecology", "meaning": "생태학, 생태(계)", "example": "Dams are threatening the ecology of rivers.", "answer": "ecology", "kr": "댐이 강의 생태계를 위협하고 있다.", "fav": false}, {"no": 110, "day": "DAY 24", "word": "logic", "meaning": "논리학; 논리", "example": "I disagree with him because his logic is flawed.", "answer": "logic", "kr": "나는 그의 논리가 잘못됐기 때문에 그에게 동의하지 않는다.", "fav": false}, {"no": 111, "day": "DAY 24", "word": "psychology", "meaning": "심리학; 심리 (상태)", "example": "He is a professor of social psychology.", "answer": "psychology", "kr": "그는 사회 심리학 교수이다.", "fav": false}, {"no": 112, "day": "DAY 24", "word": "manipulate", "meaning": "(교묘하게) 조종하다, 조작하다; 잘 다루다", "example": "He was accused of manipulating the price of gold.", "answer": "manipulating", "kr": "그는 금 가격을 조작한 혐의로 기소되었다.", "fav": false}, {"no": 113, "day": "DAY 24", "word": "manual", "meaning": "육체노동의; 수동의; 소책자, 설명서", "example": "I prefer manual cameras to digital cameras.", "answer": "manual", "kr": "나는 디지털 카메라보다 수동 카메라를 선호한다.", "fav": false}, {"no": 114, "day": "DAY 24", "word": "manuscript", "meaning": "원고; 손으로 쓴 것, 사본", "example": "The manuscript was written before the second edition was issued.", "answer": "manuscript", "kr": "그 원고는 2판이 나오기 전에 쓰였다.", "fav": false}, {"no": 115, "day": "DAY 24", "word": "intermediate", "meaning": "중급의; 중간의, 중간에 있는; 중급자", "example": "He is taking an intermediate-level course in English listening skills.", "answer": "intermediate", "kr": "그는 영어 듣기 중급 과정을 수강하고 있다.", "fav": false}, {"no": 116, "day": "DAY 24", "word": "mediate", "meaning": "조정하다, 중재하다", "example": "We mediated their dispute back in 2000.", "answer": "mediated", "kr": "우리는 2000년에 그들의 분쟁을 중재했다.", "fav": false}, {"no": 117, "day": "DAY 24", "word": "medi(a)eval", "meaning": "중세의, 중세적인", "example": "You can learn a lot about medieval society by studying history.", "answer": "medieval", "kr": "역사를 공부하면 중세 사회에 대해 많은 것을 배울 수 있다.", "fav": false}, {"no": 118, "day": "DAY 24", "word": "Mediterranean", "meaning": "((the ~)) 지중해; 지중해의, 지중해 연안의", "example": "The Nile River flows into the Mediterranean Sea.", "answer": "Mediterranean", "kr": "나일강은 지중해로 흘러든다.", "fav": false}, {"no": 119, "day": "DAY 24", "word": "minister", "meaning": "장관; 성직자, 목사", "example": "She was appointed (as) the Minister of Education.", "answer": "Minister", "kr": "그녀는 교육부 장관으로 임명되었다.", "fav": false}, {"no": 120, "day": "DAY 24", "word": "minor", "meaning": "작은, 덜 중요한; 미성년자; 부전공", "example": "It was a minor accident, so no one was hurt.", "answer": "minor", "kr": "그것은 사소한 사고여서 아무도 다치지 않았다.", "fav": false}, {"no": 121, "day": "DAY 25", "word": "admit", "meaning": "인정[시인]하다; 입장[입학]을 허가하다", "example": "He was admitted to Oxford University.", "answer": "admitted", "kr": "그는 옥스퍼드 대학에 입학 허가를 받았다.", "fav": false}, {"no": 122, "day": "DAY 25", "word": "commission", "meaning": "위원회; 수수료; 위임(장); 의뢰하다; 위임하다", "example": "The artist was commissioned to paint a portrait of the queen.", "answer": "commissioned", "kr": "그 화가는 여왕의 초상화를 그리도록 의뢰받았다.", "fav": false}, {"no": 123, "day": "DAY 25", "word": "commitment", "meaning": "약속, 공약; 전념, 헌신; 의무, 책임", "example": "We got a commitment from investors to provide the funding.", "answer": "commitment", "kr": "우리는 투자자들로부터 자금 제공 약속을 받았다.", "fav": false}, {"no": 124, "day": "DAY 25", "word": "dimension", "meaning": "치수; 측면; [수학·물리] 차원", "example": "Measure the dimensions of the shoe.", "answer": "dimensions", "kr": "그 신발의 치수를 재라.", "fav": false}, {"no": 125, "day": "DAY 25", "word": "thermometer", "meaning": "온도계, 체온계", "example": "The thermometer registered 32 degrees.", "answer": "thermometer", "kr": "온도계는 32도를 나타냈다.", "fav": false}, {"no": 126, "day": "DAY 25", "word": "mortal", "meaning": "죽을 운명의; 치명적인; 인간성, 인류", "example": "Human beings are mortal.", "answer": "mortal", "kr": "인간은 언젠가 죽는 존재이다.", "fav": false}, {"no": 127, "day": "DAY 25", "word": "mortgage", "meaning": "저당; 융자; 저당 잡히다", "example": "The young couple took out a mortgage on a house.", "answer": "mortgage", "kr": "그 젊은 부부는 집을 담보로 대출을 받았다.", "fav": false}, {"no": 128, "day": "DAY 25", "word": "murder", "meaning": "살인(죄), 살해; 죽이다", "example": "She was arrested on suspicion of murder.", "answer": "murder", "kr": "그녀는 살인 혐의로 체포되었다.", "fav": false}, {"no": 129, "day": "DAY 25", "word": "motivate", "meaning": "동기를 부여하다, 자극하다", "example": "She was highly motivated to learn foreign languages.", "answer": "motivated", "kr": "그녀는 외국어를 배우려는 강한 동기를 갖고 있었다.", "fav": false}, {"no": 130, "day": "DAY 25", "word": "remote", "meaning": "멀리 떨어진; (가능성이) 희박한; 원격 조작의", "example": "My parents live in a remote rural area.", "answer": "remote", "kr": "내 부모님은 외딴 시골 지역에 사신다.", "fav": false}, {"no": 131, "day": "DAY 25", "word": "mobility", "meaning": "이동성, 기동성", "example": "An electric wheelchair can give patients the mobility they need.", "answer": "mobility", "kr": "전동 휠체어는 환자들에게 필요한 이동성을 줄 수 있다.", "fav": false}, {"no": 132, "day": "DAY 25", "word": "mob", "meaning": "떼, 무리, 폭도", "example": "Some of the mob rushed into the stadium.", "answer": "mob", "kr": "군중 일부가 경기장으로 몰려들었다.", "fav": false}, {"no": 133, "day": "DAY 25", "word": "commodity", "meaning": "상품, 판매상품", "example": "Commodity prices are increasing sharply worldwide.", "answer": "Commodity", "kr": "상품 가격이 전 세계적으로 급격히 오르고 있다.", "fav": false}, {"no": 134, "day": "DAY 25", "word": "modify", "meaning": "변경하다, 수정하다; [문법] 수식하다", "example": "The plan has been modified to be more efficient.", "answer": "modified", "kr": "그 계획은 더 효율적이 되도록 수정되었다.", "fav": false}, {"no": 135, "day": "DAY 25", "word": "commute", "meaning": "통근하다; 통근 (거리), 통학 (거리)", "example": "I commute to work by bicycle every day.", "answer": "commute", "kr": "나는 매일 자전거로 통근한다.", "fav": false}, {"no": 136, "day": "DAY 25", "word": "mutual", "meaning": "상호 간의, 공통의", "example": "Mutual respect is important in the workplace.", "answer": "Mutual", "kr": "상호 존중은 직장에서 중요하다.", "fav": false}, {"no": 137, "day": "DAY 25", "word": "notion", "meaning": "개념, 관념, 생각", "example": "She only has a basic notion of English grammar.", "answer": "notion", "kr": "그녀는 영어 문법에 대한 기본적인 개념만 갖고 있다.", "fav": false}, {"no": 138, "day": "DAY 25", "word": "notify", "meaning": "통보하다, 알리다", "example": "Notify me immediately if you are in trouble.", "answer": "Notify", "kr": "곤란한 일이 생기면 즉시 나에게 알려줘.", "fav": false}, {"no": 139, "day": "DAY 25", "word": "notable", "meaning": "주목할 만한, 유명한, 뛰어난", "example": "Nobel prizes are awarded to people for their notable achievements.", "answer": "notable", "kr": "노벨상은 뛰어난 업적을 이룬 사람들에게 수여된다.", "fav": false}, {"no": 140, "day": "DAY 25", "word": "announce", "meaning": "알리다, 발표하다", "example": "They have not announced the results of the election yet.", "answer": "announced", "kr": "그들은 아직 선거 결과를 발표하지 않았다.", "fav": false}, {"no": 141, "day": "DAY 25", "word": "pronounce", "meaning": "발음하다; 선언하다, 선고하다", "example": "How do you properly pronounce this word?", "answer": "pronounce", "kr": "이 단어를 제대로 어떻게 발음하나요?", "fav": false}, {"no": 142, "day": "DAY 25", "word": "monotonous", "meaning": "단조로운, 지루한", "example": "People usually try to avoid doing monotonous jobs.", "answer": "monotonous", "kr": "사람들은 보통 단조로운 일을 피하려고 한다.", "fav": false}, {"no": 143, "day": "DAY 25", "word": "monolog(ue)", "meaning": "(혼자서 하는) 긴 이야기; 독백", "example": "The play ends with a monologue by the hero.", "answer": "monologue", "kr": "그 연극은 주인공의 독백으로 끝난다.", "fav": false}, {"no": 144, "day": "DAY 25", "word": "monopoly", "meaning": "독점(권); 독점 회사", "example": "The company has a monopoly on cement production.", "answer": "monopoly", "kr": "그 회사는 시멘트 생산을 독점하고 있다.", "fav": false}, {"no": 145, "day": "DAY 25", "word": "aspire", "meaning": "열망하다, 바라다", "example": "She aspires to be a journalist.", "answer": "aspires", "kr": "그녀는 저널리스트가 되기를 열망한다.", "fav": false}, {"no": 146, "day": "DAY 25", "word": "contemporary", "meaning": "현대의; 동시대의; 동시대 사람", "example": "She is taking a class on contemporary art.", "answer": "contemporary", "kr": "그녀는 현대 미술 수업을 듣고 있다.", "fav": false}, {"no": 147, "day": "DAY 25", "word": "abound", "meaning": "많이 있다, 풍부하다", "example": "Wild animals and insects abound in this forest.", "answer": "abound", "kr": "이 숲에는 야생동물과 곤충이 많이 있다.", "fav": false}, {"no": 148, "day": "DAY 25", "word": "devise", "meaning": "고안하다, 궁리하다", "example": "I devised a new business plan.", "answer": "devised", "kr": "나는 새로운 사업 계획을 고안했다.", "fav": false}, {"no": 149, "day": "DAY 25", "word": "thrust", "meaning": "(세게) 밀다; 찌르다; (세게) 밀침; 요점, 취지", "example": "She walked forward thrusting her way through the crowd.", "answer": "thrusting", "kr": "그녀는 군중을 밀치고 앞으로 걸어갔다.", "fav": false}, {"no": 150, "day": "DAY 25", "word": "threat", "meaning": "위협, 협박; (나쁜 일의) 징조, 조짐", "example": "We're terrified by the threat of terrorism.", "answer": "threat", "kr": "우리는 테러 위협에 겁을 먹고 있다.", "fav": false}, {"no": 151, "day": "DAY 26", "word": "nourish", "meaning": "영양분을 주다; 기르다, 육성하다", "example": "Children should be nourished with a balanced diet.", "answer": "nourished", "kr": "아이들은 균형 잡힌 식단으로 영양을 공급받아야 한다.", "fav": false}, {"no": 152, "day": "DAY 26", "word": "nutrition", "meaning": "영양, 영양 섭취", "example": "Good nutrition is essential to maintaining health and preventing disease.", "answer": "nutrition", "kr": "좋은 영양 섭취는 건강 유지와 질병 예방에 필수적이다.", "fav": false}, {"no": 153, "day": "DAY 26", "word": "peer", "meaning": "(지위·능력 등이) 동등한 사람, 또래; 자세히 들여다보다", "example": "I peered into the hole to see what was in the box.", "answer": "peered", "kr": "나는 상자 안에 무엇이 있는지 보려고 구멍을 자세히 들여다보았다.", "fav": false}, {"no": 154, "day": "DAY 26", "word": "transparent", "meaning": "투명한; 명백한, 이해하기 쉬운", "example": "The entrance door of this building is made of transparent glass.", "answer": "transparent", "kr": "이 건물의 출입문은 투명한 유리로 만들어졌다.", "fav": false}, {"no": 155, "day": "DAY 26", "word": "orient", "meaning": "((the O~)) 동양; 향하게 하다; 적응시키다", "example": "Hong Kong is called the Pearl of the Orient.", "answer": "Orient", "kr": "홍콩은 동양의 진주라고 불린다.", "fav": false}, {"no": 156, "day": "DAY 26", "word": "origin", "meaning": "기원, 유래; 출신", "example": "The origin of the River Mur is located in the Austrian Alps.", "answer": "origin", "kr": "머르강의 발원지는 오스트리아 알프스에 있다.", "fav": false}, {"no": 157, "day": "DAY 26", "word": "partial", "meaning": "부분적인, 불완전한; 편애하는, 편파적인", "example": "I am partial in agreement with his opinion on that matter.", "answer": "partial", "kr": "나는 그 문제에 대한 그의 의견에 부분적으로 동의한다.", "fav": false}, {"no": 158, "day": "DAY 26", "word": "proportion", "meaning": "비율, 부분; 균형, 조화", "example": "The proportion of boys to girls in this school is two to one.", "answer": "proportion", "kr": "이 학교의 남녀 비율은 2대 1이다.", "fav": false}, {"no": 159, "day": "DAY 26", "word": "portion", "meaning": "부분; 1인분; 몫", "example": "He only remembers a small portion of his dream.", "answer": "portion", "kr": "그는 자신의 꿈의 일부만 기억한다.", "fav": false}, {"no": 160, "day": "DAY 26", "word": "particle", "meaning": "작은 조각, 소량, 입자; [물리] 소립자", "example": "There are a lot of dust particles on the shelf.", "answer": "particles", "kr": "선반 위에 먼지 입자가 많이 있다.", "fav": false}, {"no": 161, "day": "DAY 26", "word": "patriot", "meaning": "애국자", "example": "Although he was killed, he is remembered as a patriot.", "answer": "patriot", "kr": "그는 죽임을 당했지만 애국자로 기억된다.", "fav": false}, {"no": 162, "day": "DAY 26", "word": "patron", "meaning": "후원자; 고객", "example": "Our company was the biggest patron of the exhibition.", "answer": "patron", "kr": "우리 회사는 그 전시회의 최대 후원자였다.", "fav": false}, {"no": 163, "day": "DAY 26", "word": "appetite", "meaning": "식욕; 욕구, 욕망", "example": "A good appetite is a good sauce.", "answer": "appetite", "kr": "좋은 식욕은 좋은 소스와 같다.", "fav": false}, {"no": 164, "day": "DAY 26", "word": "competent", "meaning": "유능한, 역량 있는", "example": "The interpreter is not as competent as I thought.", "answer": "competent", "kr": "그 통역사는 내가 생각했던 것만큼 유능하지 않다.", "fav": false}, {"no": 165, "day": "DAY 26", "word": "expedition", "meaning": "원정, 탐험(대)", "example": "She successfully led an expedition to the North Pole.", "answer": "expedition", "kr": "그녀는 북극 원정을 성공적으로 이끌었다.", "fav": false}, {"no": 166, "day": "DAY 26", "word": "pedestrian", "meaning": "보행자; 보행자(용)의", "example": "A crosswalk was created for the safety of the pedestrians.", "answer": "pedestrians", "kr": "보행자의 안전을 위해 횡단보도가 만들어졌다.", "fav": false}, {"no": 167, "day": "DAY 26", "word": "vague", "meaning": "막연한, 애매한; 희미한, 분명치 않은", "example": "I was confused by his vague answer.", "answer": "vague", "kr": "나는 그의 애매한 대답에 혼란스러웠다.", "fav": false}, {"no": 168, "day": "DAY 26", "word": "expel", "meaning": "내쫓다, 추방하다", "example": "She was expelled from the club because she broke the rules.", "answer": "expelled", "kr": "그녀는 규칙을 어겨서 동아리에서 쫓겨났다.", "fav": false}, {"no": 169, "day": "DAY 26", "word": "impulse", "meaning": "충동, 욕구; 추진(력)", "example": "She bought a lot of clothes online on impulse.", "answer": "impulse", "kr": "그녀는 충동적으로 온라인에서 옷을 많이 샀다.", "fav": false}, {"no": 170, "day": "DAY 26", "word": "dispel", "meaning": "(느낌·믿음 등을) 떨쳐 버리다, 없애다", "example": "His detailed explanation dispelled all my doubts.", "answer": "dispelled", "kr": "그의 상세한 설명이 내 모든 의심을 없애주었다.", "fav": false}, {"no": 171, "day": "DAY 26", "word": "emphasize", "meaning": "강조하다", "example": "He emphasized the bad effects of smoking.", "answer": "emphasized", "kr": "그는 흡연의 나쁜 영향을 강조했다.", "fav": false}, {"no": 172, "day": "DAY 26", "word": "fancy", "meaning": "상상, 공상; 화려한, 장식적인; 고급의, 비싼", "example": "Dragons, fairies, and giants are creatures of fancy.", "answer": "fancy", "kr": "용, 요정, 거인은 상상 속 창조물이다.", "fav": false}, {"no": 173, "day": "DAY 26", "word": "phenomenon", "meaning": "현상, 사건", "example": "A volcanic eruption is a natural phenomenon that can't be prevented by people.", "answer": "phenomenon", "kr": "화산 폭발은 사람이 막을 수 없는 자연 현상이다.", "fav": false}, {"no": 174, "day": "DAY 26", "word": "diplomatic", "meaning": "외교의; 외교에 능한", "example": "Korea established diplomatic relations with Brunei in 1984.", "answer": "diplomatic", "kr": "한국은 1984년 브루나이와 외교 관계를 수립했다.", "fav": false}, {"no": 175, "day": "DAY 26", "word": "imply", "meaning": "내포하다, 함축하다; 암시하다", "example": "Her silence implied consent to the proposal.", "answer": "implied", "kr": "그녀의 침묵은 그 제안에 대한 동의를 암시했다.", "fav": false}, {"no": 176, "day": "DAY 26", "word": "determine", "meaning": "결정하다; 결심하다", "example": "Demand usually determines prices.", "answer": "determines", "kr": "수요는 보통 가격을 결정한다.", "fav": false}, {"no": 177, "day": "DAY 26", "word": "terminate", "meaning": "끝나다, 종결시키다", "example": "The meeting has just terminated after a long debate.", "answer": "terminated", "kr": "긴 논쟁 끝에 회의가 방금 끝났다.", "fav": false}, {"no": 178, "day": "DAY 26", "word": "distort", "meaning": "왜곡하다; (형체·소리 등을) 비틀다", "example": "The mass media should not distort facts or the truth.", "answer": "distort", "kr": "대중 매체는 사실이나 진실을 왜곡해서는 안 된다.", "fav": false}, {"no": 179, "day": "DAY 26", "word": "torment", "meaning": "고통, 고뇌; 고통을 주다; 괴롭히다", "example": "She was tormented after she made a fatal mistake.", "answer": "tormented", "kr": "그녀는 치명적인 실수를 저지른 후 괴로워했다.", "fav": false}, {"no": 180, "day": "DAY 26", "word": "torture", "meaning": "고문; 심한 고통; 고문하다; 몹시 괴롭히다", "example": "They were severely tortured by the enemy.", "answer": "tortured", "kr": "그들은 적에게 심하게 고문당했다.", "fav": false}, {"no": 181, "day": "DAY 27", "word": "component", "meaning": "구성 요소, 성분, 부품; 구성하는", "example": "I want to replace the defective component with a new one.", "answer": "component", "kr": "나는 그 결함 있는 부품을 새것으로 교체하고 싶다.", "fav": false}, {"no": 182, "day": "DAY 27", "word": "compound", "meaning": "혼합[합성]물, 합성어; 합성의; 혼합[합성]하다; 악화시키다", "example": "Water is a chemical compound of hydrogen and oxygen.", "answer": "compound", "kr": "물은 수소와 산소의 화합물이다.", "fav": false}, {"no": 183, "day": "DAY 27", "word": "impose", "meaning": "(세금·벌·의무 등을) 지우다, 부과하다; 강요하다", "example": "A special excise tax is imposed on alcohol and tobacco products.", "answer": "imposed", "kr": "주류와 담배 제품에는 특별 소비세가 부과된다.", "fav": false}, {"no": 184, "day": "DAY 27", "word": "opponent", "meaning": "상대; 반대자", "example": "Our team was easily beaten by our opponents.", "answer": "opponents", "kr": "우리 팀은 상대팀에게 쉽게 패했다.", "fav": false}, {"no": 185, "day": "DAY 27", "word": "suppose", "meaning": "추측하다, 생각하다; 가정하다, 상상하다", "example": "Suppose that you win the lottery.", "answer": "Suppose", "kr": "네가 복권에 당첨된다고 가정해 보자.", "fav": false}, {"no": 186, "day": "DAY 27", "word": "metropolis", "meaning": "주요 도시, 대도시", "example": "The small town soon grew into a business metropolis.", "answer": "metropolis", "kr": "그 작은 마을은 곧 상업 대도시로 성장했다.", "fav": false}, {"no": 187, "day": "DAY 27", "word": "portable", "meaning": "휴대용의, 가지고 다닐 수 있는", "example": "The machine is small and light enough to be portable.", "answer": "portable", "kr": "그 기계는 휴대할 수 있을 만큼 작고 가볍다.", "fav": false}, {"no": 188, "day": "DAY 27", "word": "depress", "meaning": "낙담시키다, 우울하게 하다; 불경기로 만들다", "example": "The result of the election depressed him.", "answer": "depressed", "kr": "선거 결과는 그를 낙담시켰다.", "fav": false}, {"no": 189, "day": "DAY 27", "word": "impress", "meaning": "감동시키다, 깊은 인상을 주다; (도장 등을) 찍다", "example": "Her speech impressed the audience very much.", "answer": "impressed", "kr": "그녀의 연설은 청중에게 깊은 감동을 주었다.", "fav": false}, {"no": 190, "day": "DAY 27", "word": "oppress", "meaning": "억압하다, 탄압하다", "example": "The natives were oppressed by the invaders.", "answer": "oppressed", "kr": "원주민들은 침략자들에게 억압당했다.", "fav": false}, {"no": 191, "day": "DAY 27", "word": "probe", "meaning": "(엄밀히) 조사하다, 검사하다; (엄밀한) 조사", "example": "Police probed deep into her personal life.", "answer": "probed", "kr": "경찰은 그녀의 사생활을 깊이 조사했다.", "fav": false}, {"no": 192, "day": "DAY 27", "word": "prove", "meaning": "증명하다, 입증하다; (~으로) 판명되다", "example": "Tests have proven that the car has mechanical problems.", "answer": "proven", "kr": "검사 결과 그 차에 기계적인 문제가 있다는 것이 증명되었다.", "fav": false}, {"no": 193, "day": "DAY 27", "word": "probable", "meaning": "있음 직한, 그럴듯한", "example": "It is quite probable he won't come to the party.", "answer": "probable", "kr": "그가 파티에 오지 않을 가능성이 꽤 높다.", "fav": false}, {"no": 194, "day": "DAY 27", "word": "primitive", "meaning": "원시의, 원시적인", "example": "The study of primitive societies gives clues to the origins of human society.", "answer": "primitive", "kr": "원시 사회에 대한 연구는 인류 사회의 기원에 대한 단서를 준다.", "fav": false}, {"no": 195, "day": "DAY 27", "word": "prior", "meaning": "이전의, 먼저의; (~에) 우선하는", "example": "You need prior approval to attend the conference.", "answer": "prior", "kr": "회의에 참석하려면 사전 승인이 필요하다.", "fav": false}, {"no": 196, "day": "DAY 27", "word": "deprive", "meaning": "빼앗다, 박탈하다", "example": "The storm deprived a lot of people of their home and property.", "answer": "deprived", "kr": "그 폭풍은 많은 사람들에게서 집과 재산을 빼앗았다.", "fav": false}, {"no": 197, "day": "DAY 27", "word": "private", "meaning": "사적인, 개인적인, 사유의; 비밀의", "example": "They reduced private education expenses.", "answer": "private", "kr": "그들은 사교육비를 줄였다.", "fav": false}, {"no": 198, "day": "DAY 27", "word": "dispute", "meaning": "논쟁, 분쟁; 논쟁하다, 반박하다", "example": "The dispute between the two sides has not been resolved yet.", "answer": "dispute", "kr": "양측 간의 분쟁은 아직 해결되지 않았다.", "fav": false}, {"no": 199, "day": "DAY 27", "word": "reputation", "meaning": "평판, 명성", "example": "The company has a good reputation for quality products.", "answer": "reputation", "kr": "그 회사는 품질 좋은 제품으로 좋은 평판을 갖고 있다.", "fav": false}, {"no": 200, "day": "DAY 27", "word": "implement", "meaning": "도구, 연장; (정책·계획 등을) 실행[이행]하다", "example": "They used the latest farming implements for mass production.", "answer": "implements", "kr": "그들은 대량 생산을 위해 최신 농기구를 사용했다.", "fav": false}, {"no": 201, "day": "DAY 27", "word": "terrify", "meaning": "겁나게 하다, 무섭게 하다", "example": "Cockroaches are the only things that truly terrify me.", "answer": "terrify", "kr": "바퀴벌레는 나를 정말로 겁나게 하는 유일한 것이다.", "fav": false}, {"no": 202, "day": "DAY 27", "word": "territory", "meaning": "영토, 지역; 영역", "example": "Everyone knows that Dokdo is Korean territory.", "answer": "territory", "kr": "모두가 독도가 한국 영토임을 알고 있다.", "fav": false}, {"no": 203, "day": "DAY 27", "word": "tremble", "meaning": "떨다, 떨리다; 흔들리다, 진동하다", "example": "Her entire body was trembling with fear.", "answer": "trembling", "kr": "그녀의 온몸이 두려움으로 떨리고 있었다.", "fav": false}, {"no": 204, "day": "DAY 27", "word": "tremendous", "meaning": "엄청난, 막대한; 대단한", "example": "He made a tremendous amount of money through his online shopping mall.", "answer": "tremendous", "kr": "그는 온라인 쇼핑몰을 통해 엄청난 돈을 벌었다.", "fav": false}, {"no": 205, "day": "DAY 27", "word": "convict", "meaning": "유죄를 입증[선고]하다; 죄수", "example": "He was convicted of taking a $10,000 bribe.", "answer": "convicted", "kr": "그는 1만 달러의 뇌물을 받은 혐의로 유죄 판결을 받았다.", "fav": false}, {"no": 206, "day": "DAY 27", "word": "convey", "meaning": "(생각·감정 등을) 전하다, 전달하다; 나르다", "example": "I will convey your message clearly to him.", "answer": "convey", "kr": "내가 그에게 네 메시지를 정확히 전달할게.", "fav": false}, {"no": 207, "day": "DAY 27", "word": "previous", "meaning": "이전의, 앞의, 사전의", "example": "All food and drinks were prepared on the previous night.", "answer": "previous", "kr": "모든 음식과 음료는 전날 밤에 준비되었다.", "fav": false}, {"no": 208, "day": "DAY 27", "word": "via", "meaning": "~을 경유해서; ~을 통해서, ~을 매개로 하여", "example": "I'd like to send this parcel via air mail.", "answer": "via", "kr": "이 소포를 항공 우편으로 보내고 싶습니다.", "fav": false}, {"no": 209, "day": "DAY 27", "word": "voyage", "meaning": "항해, 여행; 항해하다, 여행하다", "example": "I'll go on a voyage around the world someday.", "answer": "voyage", "kr": "언젠가 나는 세계 일주 항해를 떠날 것이다.", "fav": false}, {"no": 210, "day": "DAY 27", "word": "voluntary", "meaning": "자발적인; 자원봉사의, 무상으로 일하는", "example": "Their participation was voluntary.", "answer": "voluntary", "kr": "그들의 참여는 자발적이었다.", "fav": false}, {"no": 211, "day": "DAY 28", "word": "inquire", "meaning": "묻다, 알아보다; ((~ into)) 조사하다", "example": "I called to inquire about train times.", "answer": "inquire", "kr": "나는 열차 시간을 문의하기 위해 전화했다.", "fav": false}, {"no": 212, "day": "DAY 28", "word": "conquer", "meaning": "정복하다; 이기다; (어려움 등을) 극복하다", "example": "Britain was conquered by the Normans in 1066.", "answer": "conquered", "kr": "영국은 1066년에 노르만족에게 정복당했다.", "fav": false}, {"no": 213, "day": "DAY 28", "word": "exquisite", "meaning": "정교한, 매우 아름다운", "example": "She created an exquisite painting in ten minutes.", "answer": "exquisite", "kr": "그녀는 10분 만에 정교한 그림을 그렸다.", "fav": false}, {"no": 214, "day": "DAY 28", "word": "require", "meaning": "필요로 하다; (법·규칙·계약 등이) 요구하다", "example": "Success requires solid plans and constant effort.", "answer": "requires", "kr": "성공은 확고한 계획과 끊임없는 노력을 필요로 한다.", "fav": false}, {"no": 215, "day": "DAY 28", "word": "consent", "meaning": "동의, 승낙; 동의하다, 승낙하다", "example": "His family consented to donate his organs after he died.", "answer": "consented", "kr": "그의 가족은 그가 죽은 후 그의 장기를 기증하는 데 동의했다.", "fav": false}, {"no": 216, "day": "DAY 28", "word": "resent", "meaning": "분개하다, 불쾌하게 여기다", "example": "I deeply resent his arrogant attitude.", "answer": "resent", "kr": "나는 그의 거만한 태도에 깊이 분개한다.", "fav": false}, {"no": 217, "day": "DAY 28", "word": "scent", "meaning": "냄새, 향기; 냄새를 풍기다", "example": "The red roses had a sweet scent.", "answer": "scent", "kr": "빨간 장미에서는 달콤한 향기가 났다.", "fav": false}, {"no": 218, "day": "DAY 28", "word": "sensation", "meaning": "감각, 지각력; 느낌, 기분; 엄청난 관심, 대소동", "example": "He felt a prickling sensation in his throat.", "answer": "sensation", "kr": "그는 목에 따끔거리는 느낌을 받았다.", "fav": false}, {"no": 219, "day": "DAY 28", "word": "sense", "meaning": "감각; 느낌; 분별력, 센스; 의미", "example": "A dog has a very keen sense of smell.", "answer": "sense", "kr": "개는 후각이 매우 예민하다.", "fav": false}, {"no": 220, "day": "DAY 28", "word": "consequence", "meaning": "결과, 영향; 중요성", "example": "You should accept the consequences of your words.", "answer": "consequences", "kr": "당신은 자신이 한 말의 결과를 받아들여야 한다.", "fav": false}, {"no": 221, "day": "DAY 28", "word": "sequence", "meaning": "연속, 잇달아 일어남; 순서, 차례", "example": "Try to place the pictures in sequence.", "answer": "sequence", "kr": "사진들을 순서대로 배열해 보아라.", "fav": false}, {"no": 222, "day": "DAY 28", "word": "subsequent", "meaning": "다음의, 그 이후의", "example": "This artwork will be enjoyed by subsequent generations.", "answer": "subsequent", "kr": "이 작품은 후대에도 즐겨질 것이다.", "fav": false}, {"no": 223, "day": "DAY 28", "word": "obsess", "meaning": "((주로 수동태로)) 사로잡다, ~ 생각만 하게 하다", "example": "He was obsessed by his fear of the operation.", "answer": "obsessed", "kr": "그는 수술에 대한 두려움에 사로잡혀 있었다.", "fav": false}, {"no": 224, "day": "DAY 28", "word": "reside", "meaning": "살다, 거주하다", "example": "He has resided abroad for ten years.", "answer": "resided", "kr": "그는 10년째 해외에 거주하고 있다.", "fav": false}, {"no": 225, "day": "DAY 28", "word": "session", "meaning": "학년, 학기, 수업; (회의·의회·법정 등이) 진행 중인 시기", "example": "All employees must take part in a training session twice a year.", "answer": "session", "kr": "모든 직원은 1년에 두 번 교육 과정에 참여해야 한다.", "fav": false}, {"no": 226, "day": "DAY 28", "word": "settle", "meaning": "(분쟁 등을) 해결하다, 끝내다; 정착하다; 진정시키다", "example": "She settled in San Francisco after graduation.", "answer": "settled", "kr": "그녀는 졸업 후 샌프란시스코에 정착했다.", "fav": false}, {"no": 227, "day": "DAY 28", "word": "resemble", "meaning": "~와 닮다, 비슷하다", "example": "He resembles his father in both appearance and character.", "answer": "resembles", "kr": "그는 외모와 성격 모두 아버지를 닮았다.", "fav": false}, {"no": 228, "day": "DAY 28", "word": "simulation", "meaning": "모의실험, 흉내, 시뮬레이션", "example": "They strengthened their teamwork through a simulation game.", "answer": "simulation", "kr": "그들은 시뮬레이션 게임을 통해 팀워크를 강화했다.", "fav": false}, {"no": 229, "day": "DAY 28", "word": "assemble", "meaning": "모으다, 모이다; 조립하다", "example": "The father and his young son are assembling a model airplane.", "answer": "assembling", "kr": "아버지와 어린 아들이 모형 비행기를 조립하고 있다.", "fav": false}, {"no": 230, "day": "DAY 28", "word": "seemingly", "meaning": "겉보기에는, 얼핏 보기에", "example": "She solved the seemingly difficult problem with ease.", "answer": "seemingly", "kr": "그녀는 겉보기에 어려워 보이는 문제를 쉽게 풀었다.", "fav": false}, {"no": 231, "day": "DAY 28", "word": "rational", "meaning": "이성적인; 합리적인, 분별 있는", "example": "Humans are rational beings with an intellect.", "answer": "rational", "kr": "인간은 지성을 가진 이성적인 존재이다.", "fav": false}, {"no": 232, "day": "DAY 28", "word": "scientific", "meaning": "과학적인, 과학의", "example": "Students need to develop scientific thinking abilities.", "answer": "scientific", "kr": "학생들은 과학적 사고 능력을 개발할 필요가 있다.", "fav": false}, {"no": 233, "day": "DAY 28", "word": "desert", "meaning": "사막; 버리다, 떠나다", "example": "He deserted his friends just when they needed him most.", "answer": "deserted", "kr": "그는 친구들이 그를 가장 필요로 할 때 그들을 저버렸다.", "fav": false}, {"no": 234, "day": "DAY 28", "word": "insert", "meaning": "삽입하다, 넣다; (문서 등에) 덧붙이다", "example": "She inserted a coin into a vending machine.", "answer": "inserted", "kr": "그녀는 자판기에 동전을 넣었다.", "fav": false}, {"no": 235, "day": "DAY 28", "word": "intervene", "meaning": "개입하다, 중재하다; (대화 등에) 끼어들다; (사건 등이) 사이에 일어나다", "example": "He always intervenes in disputes between neighbors.", "answer": "intervenes", "kr": "그는 늘 이웃 간의 분쟁에 개입한다.", "fav": false}, {"no": 236, "day": "DAY 28", "word": "souvenir", "meaning": "기념품, 기념 선물", "example": "I bought some souvenirs for my friends in the hotel.", "answer": "souvenirs", "kr": "나는 호텔에서 친구들에게 줄 기념품을 좀 샀다.", "fav": false}, {"no": 237, "day": "DAY 28", "word": "supervise", "meaning": "감독하다, 관리하다", "example": "He directly supervises all the staff in this hotel.", "answer": "supervises", "kr": "그는 이 호텔의 모든 직원을 직접 감독한다.", "fav": false}, {"no": 238, "day": "DAY 28", "word": "vision", "meaning": "시력; 시야; 통찰력, 선견지명", "example": "Eagles have very good vision.", "answer": "vision", "kr": "독수리는 시력이 매우 좋다.", "fav": false}, {"no": 239, "day": "DAY 28", "word": "revive", "meaning": "소생[회복]시키다; 되살아나다", "example": "The government is doing its best to revive the economy.", "answer": "revive", "kr": "정부는 경제를 되살리기 위해 최선을 다하고 있다.", "fav": false}, {"no": 240, "day": "DAY 28", "word": "vital", "meaning": "매우 중요한, 필수적인; 활기찬, 생명 유지에 필요한", "example": "Parents play a vital role in the development of children.", "answer": "vital", "kr": "부모는 아이들의 발달에 필수적인 역할을 한다.", "fav": false}, {"no": 241, "day": "DAY 39", "word": "adore", "meaning": "동경[흠모]하다, 아주 좋아하다; 숭배하다", "example": "The girl adored her younger sister.", "answer": "adored", "kr": "그 소녀는 여동생을 아주 좋아했다.", "fav": false}, {"no": 242, "day": "DAY 39", "word": "envious", "meaning": "부러워하는, 샘내는", "example": "I'm envious of people who made their dreams come true.", "answer": "envious", "kr": "나는 자신의 꿈을 이룬 사람들이 부럽다.", "fav": false}, {"no": 243, "day": "DAY 39", "word": "fascinated", "meaning": "매료된, 매혹된", "example": "He was fascinated by Indian music.", "answer": "fascinated", "kr": "그는 인도 음악에 매료되었다.", "fav": false}, {"no": 244, "day": "DAY 39", "word": "fond", "meaning": "좋아하여; 다정한", "example": "Mary is fond of telling interesting stories.", "answer": "fond", "kr": "메리는 흥미로운 이야기를 하는 것을 좋아한다.", "fav": false}, {"no": 245, "day": "DAY 39", "word": "manifest", "meaning": "(감정 등을) 밖으로 나타내다; 명백한, 분명한", "example": "They manifested their intention to invest in our new products.", "answer": "manifested", "kr": "그들은 우리의 신제품에 투자하려는 의도를 명확히 드러냈다.", "fav": false}, {"no": 246, "day": "DAY 39", "word": "astonished", "meaning": "깜짝 놀란", "example": "She is astonished at the amount of work she has to do now.", "answer": "astonished", "kr": "그녀는 지금 해야 할 일의 양에 깜짝 놀란다.", "fav": false}, {"no": 247, "day": "DAY 39", "word": "indifferent", "meaning": "무관심한, 사심이 없는", "example": "Because he was indifferent to politics, he never voted.", "answer": "indifferent", "kr": "그는 정치에 무관심했기 때문에 한 번도 투표하지 않았다.", "fav": false}, {"no": 248, "day": "DAY 39", "word": "embarrassed", "meaning": "난처한, 거북한", "example": "Her words were so direct that I got embarrassed.", "answer": "embarrassed", "kr": "그녀의 말이 너무 직설적이어서 나는 당황했다.", "fav": false}, {"no": 249, "day": "DAY 39", "word": "hesitate", "meaning": "주저하다, 망설이다", "example": "I'm hesitating about joining the movie club.", "answer": "hesitating", "kr": "나는 영화 동아리에 가입할지 망설이고 있다.", "fav": false}, {"no": 250, "day": "DAY 39", "word": "panic", "meaning": "당황하여 허둥대다; 당황한; 공황", "example": "Schools urged parents not to panic when flu strikes.", "answer": "panic", "kr": "학교들은 독감이 유행할 때 부모들에게 당황하지 말라고 촉구했다.", "fav": false}, {"no": 251, "day": "DAY 39", "word": "startled", "meaning": "놀란", "example": "I was startled when a man grabbed my arm.", "answer": "startled", "kr": "한 남자가 내 팔을 잡았을 때 나는 깜짝 놀랐다.", "fav": false}, {"no": 252, "day": "DAY 39", "word": "affection", "meaning": "애정, 애착", "example": "Children need to receive a lot of affection from their parents for healthy development.", "answer": "affection", "kr": "아이들은 건강한 발달을 위해 부모로부터 많은 애정을 받아야 한다.", "fav": false}, {"no": 253, "day": "DAY 39", "word": "provoke", "meaning": "유발하다; 화나게 하다", "example": "The criticism provoked people to strong anger.", "answer": "provoked", "kr": "그 비판은 사람들을 격분하게 만들었다.", "fav": false}, {"no": 254, "day": "DAY 39", "word": "disgusting", "meaning": "역겨운, 혐오스러운", "example": "The air in the abandoned house had a disgusting smell.", "answer": "disgusting", "kr": "버려진 집 안의 공기에서는 역겨운 냄새가 났다.", "fav": false}, {"no": 255, "day": "DAY 39", "word": "annoyed", "meaning": "짜증이 난, 화가 난", "example": "The woman's neighbors were annoyed because her dog kept barking all night.", "answer": "annoyed", "kr": "그 여성의 이웃들은 그녀의 개가 밤새 짖어서 짜증이 났다.", "fav": false}, {"no": 256, "day": "DAY 39", "word": "frustrated", "meaning": "좌절감을 느끼는, 불만스러워 하는", "example": "Michael was frustrated that he was an awful swimmer.", "answer": "frustrated", "kr": "마이클은 자신이 수영을 못한다는 사실에 좌절했다.", "fav": false}, {"no": 257, "day": "DAY 39", "word": "furious", "meaning": "격노한; 맹렬한", "example": "His rude words made me furious.", "answer": "furious", "kr": "그의 무례한 말이 나를 몹시 화나게 만들었다.", "fav": false}, {"no": 258, "day": "DAY 39", "word": "hatred", "meaning": "미움, 증오, 혐오", "example": "She looked at him with eyes full of hatred.", "answer": "hatred", "kr": "그녀는 증오로 가득 찬 눈으로 그를 바라보았다.", "fav": false}, {"no": 259, "day": "DAY 39", "word": "humiliating", "meaning": "치욕적인, 굴욕적인", "example": "It is humiliating to be scolded in public.", "answer": "humiliating", "kr": "사람들 앞에서 야단맞는 것은 굴욕적이다.", "fav": false}, {"no": 260, "day": "DAY 39", "word": "irritated", "meaning": "짜증이 난, 화난", "example": "I'm irritated by the fact that my cell phone doesn't work.", "answer": "irritated", "kr": "나는 휴대폰이 작동하지 않는다는 사실에 짜증이 난다.", "fav": false}, {"no": 261, "day": "DAY 39", "word": "keen", "meaning": "열심인; 몹시 하고 싶어 하는; 예민한", "example": "He was keen to promote Korean culture.", "answer": "keen", "kr": "그는 한국 문화를 알리는 데 매우 열심이었다.", "fav": false}, {"no": 262, "day": "DAY 39", "word": "mournful", "meaning": "구슬픈, 슬픔에 잠긴", "example": "Your mournful story brought tears to my eyes.", "answer": "mournful", "kr": "당신의 구슬픈 이야기가 내 눈에 눈물을 자아냈다.", "fav": false}, {"no": 263, "day": "DAY 39", "word": "ashamed", "meaning": "창피한, 부끄러운", "example": "The company's president was ashamed of his actions and made a formal apology.", "answer": "ashamed", "kr": "그 회사의 사장은 자신의 행동을 부끄러워하며 공식 사과를 했다.", "fav": false}, {"no": 264, "day": "DAY 39", "word": "disappointed", "meaning": "실망한, 낙담한", "example": "I was disappointed that the singer decided to cancel the show.", "answer": "disappointed", "kr": "나는 그 가수가 공연을 취소하기로 결정해서 실망했다.", "fav": false}, {"no": 265, "day": "DAY 39", "word": "sorrowful", "meaning": "슬픈, 비탄에 잠긴", "example": "Matt played a sorrowful melody on his violin.", "answer": "sorrowful", "kr": "매트는 바이올린으로 슬픈 멜로디를 연주했다.", "fav": false}, {"no": 266, "day": "DAY 39", "word": "gloomy", "meaning": "우울한, 울적한", "example": "She looks gloomy because she broke up with her boyfriend.", "answer": "gloomy", "kr": "그녀는 남자친구와 헤어져서 우울해 보인다.", "fav": false}, {"no": 267, "day": "DAY 39", "word": "grief", "meaning": "큰 슬픔, 비탄", "example": "He went out of his mind with grief.", "answer": "grief", "kr": "그는 슬픔에 정신을 잃을 지경이었다.", "fav": false}, {"no": 268, "day": "DAY 39", "word": "delighted", "meaning": "기쁜, 즐거워하는", "example": "The fans were delighted to meet their favorite singer.", "answer": "delighted", "kr": "팬들은 좋아하는 가수를 만나서 기뻐했다.", "fav": false}, {"no": 269, "day": "DAY 39", "word": "gratifying", "meaning": "만족스러운, 유쾌한", "example": "We achieved gratifying results with our business.", "answer": "gratifying", "kr": "우리는 사업에서 만족스러운 결과를 얻었다.", "fav": false}, {"no": 270, "day": "DAY 39", "word": "miserable", "meaning": "비참한, 불행한", "example": "He had a miserable life until he got a job.", "answer": "miserable", "kr": "그는 직장을 얻기 전까지 비참한 삶을 살았다.", "fav": false}, {"no": 271, "day": "DAY 40", "word": "risky", "meaning": "모험적인, 대담한, 위험한", "example": "I consciously avoided the risky situation.", "answer": "risky", "kr": "나는 의식적으로 위험한 상황을 피했다.", "fav": false}, {"no": 272, "day": "DAY 40", "word": "urgent", "meaning": "긴박한, 긴급한", "example": "Jessica sent an urgent message to her friend.", "answer": "urgent", "kr": "제시카는 친구에게 긴급한 메시지를 보냈다.", "fav": false}, {"no": 273, "day": "DAY 40", "word": "chaotic", "meaning": "혼돈된, 무질서한, 혼란한", "example": "The global economy is becoming more and more chaotic.", "answer": "chaotic", "kr": "세계 경제는 점점 더 혼란스러워지고 있다.", "fav": false}, {"no": 274, "day": "DAY 40", "word": "hazardous", "meaning": "위험한, 모험적인", "example": "Everyone knows that smoking is hazardous to the body.", "answer": "hazardous", "kr": "모두가 흡연이 몸에 위험하다는 것을 안다.", "fav": false}, {"no": 275, "day": "DAY 40", "word": "frightening", "meaning": "겁을 주는", "example": "After watching the movie, I had frightening nightmares for several days.", "answer": "frightening", "kr": "그 영화를 본 후 나는 며칠 동안 무서운 악몽을 꾸었다.", "fav": false}, {"no": 276, "day": "DAY 40", "word": "formidable", "meaning": "무서운; 만만치 않은", "example": "We'll face many formidable opponents in this contest.", "answer": "formidable", "kr": "우리는 이번 대회에서 만만치 않은 상대들을 많이 만날 것이다.", "fav": false}, {"no": 277, "day": "DAY 40", "word": "stunning", "meaning": "깜짝 놀라게 하는; 놀랄 만큼 아름다운[멋진]", "example": "Her clothes are absolutely stunning.", "answer": "stunning", "kr": "그녀의 옷은 정말 눈부시게 아름답다.", "fav": false}, {"no": 278, "day": "DAY 40", "word": "dreadful", "meaning": "지독한, 몹시 싫은", "example": "I can't stand these dreadful weather conditions.", "answer": "dreadful", "kr": "나는 이런 지독한 날씨를 견딜 수 없다.", "fav": false}, {"no": 279, "day": "DAY 40", "word": "horror", "meaning": "공포, 무서움", "example": "We watched horror movies at home last night.", "answer": "horror", "kr": "우리는 어젯밤 집에서 공포 영화를 봤다.", "fav": false}, {"no": 280, "day": "DAY 40", "word": "vigorous", "meaning": "활발한, 격렬한; 활기찬, 건강한", "example": "They had a very vigorous debate.", "answer": "vigorous", "kr": "그들은 매우 활발한 토론을 벌였다.", "fav": false}, {"no": 281, "day": "DAY 40", "word": "yearn", "meaning": "동경하다, 그리워하다; 열망하다", "example": "She is yearning for older times when her family lived together.", "answer": "yearning", "kr": "그녀는 가족이 함께 살던 예전 시절을 그리워하고 있다.", "fav": false}, {"no": 282, "day": "DAY 40", "word": "exotic", "meaning": "외래의; 이국풍의", "example": "The Spain restaurant has an exotic atmosphere.", "answer": "exotic", "kr": "그 스페인 식당은 이국적인 분위기를 가지고 있다.", "fav": false}, {"no": 283, "day": "DAY 40", "word": "tragic", "meaning": "비극적인; 매우 슬픈", "example": "Eighteen people were injured when a tragic accident occurred.", "answer": "tragic", "kr": "비극적인 사고가 발생해 18명이 부상을 입었다.", "fav": false}, {"no": 284, "day": "DAY 40", "word": "cruel", "meaning": "잔인한, 잔혹한; 비참한", "example": "I believe hunting is cruel and unnecessary.", "answer": "cruel", "kr": "나는 사냥이 잔인하고 불필요하다고 생각한다.", "fav": false}, {"no": 285, "day": "DAY 40", "word": "melancholic", "meaning": "우울한, 침울한", "example": "I feel melancholic when I hear this song.", "answer": "melancholic", "kr": "이 노래를 들으면 우울해진다.", "fav": false}, {"no": 286, "day": "DAY 40", "word": "weird", "meaning": "이상한, 괴상한", "example": "His behavior was a bit weird today.", "answer": "weird", "kr": "오늘 그의 행동은 조금 이상했다.", "fav": false}, {"no": 287, "day": "DAY 40", "word": "desperate", "meaning": "자포자기의; 필사적인; 절망적인", "example": "The refugees were desperate to find someplace safe.", "answer": "desperate", "kr": "난민들은 안전한 곳을 찾기 위해 필사적이었다.", "fav": false}, {"no": 288, "day": "DAY 40", "word": "dreary", "meaning": "쓸쓸한, 음울한, 황량한", "example": "Her smile could brighten a dreary winter's day.", "answer": "dreary", "kr": "그녀의 미소는 쓸쓸한 겨울날을 밝게 만들 수 있었다.", "fav": false}, {"no": 289, "day": "DAY 40", "word": "dynamic", "meaning": "동적인; 정력적인, 활발한; ((~s)) 역학; 원동력", "example": "She was well known for her dynamic personality.", "answer": "dynamic", "kr": "그녀는 활기찬 성격으로 잘 알려져 있었다.", "fav": false}, {"no": 290, "day": "DAY 40", "word": "serene", "meaning": "잔잔한, 평온한", "example": "This picture makes me feel so serene.", "answer": "serene", "kr": "이 그림은 나를 매우 평온하게 느끼게 한다.", "fav": false}, {"no": 291, "day": "DAY 40", "word": "solemn", "meaning": "진지한, 엄숙한", "example": "My father read the article with a solemn expression on his face.", "answer": "solemn", "kr": "아버지는 엄숙한 표정으로 그 기사를 읽으셨다.", "fav": false}, {"no": 292, "day": "DAY 40", "word": "stern", "meaning": "엄중한, 강경한", "example": "The teacher used a stern voice to get her students' attention.", "answer": "stern", "kr": "선생님은 학생들의 주의를 끌기 위해 엄한 목소리를 사용했다.", "fav": false}, {"no": 293, "day": "DAY 40", "word": "cynical", "meaning": "냉소적인; 비관적인", "example": "Some people are cynical about politics.", "answer": "cynical", "kr": "어떤 사람들은 정치에 대해 냉소적이다.", "fav": false}, {"no": 294, "day": "DAY 40", "word": "satirical", "meaning": "풍자적인, 비꼬는", "example": "He began to draw satirical cartoons for newspapers.", "answer": "satirical", "kr": "그는 신문에 풍자 만화를 그리기 시작했다.", "fav": false}, {"no": 295, "day": "DAY 40", "word": "ironic(al)", "meaning": "반어적인, 빗대는", "example": "It is ironic that such a lazy boy grew up to be a CEO.", "answer": "ironic", "kr": "그렇게 게으른 소년이 자라서 CEO가 됐다는 것은 아이러니하다.", "fav": false}, {"no": 296, "day": "DAY 40", "word": "pessimistic", "meaning": "비관적인, 염세적인", "example": "Some people have a pessimistic view of the increase in housing prices.", "answer": "pessimistic", "kr": "어떤 사람들은 주택 가격 상승에 대해 비관적인 견해를 갖고 있다.", "fav": false}, {"no": 297, "day": "DAY 40", "word": "informative", "meaning": "정보를 주는, 유익한", "example": "The book is quite informative.", "answer": "informative", "kr": "그 책은 꽤 유익하다.", "fav": false}, {"no": 298, "day": "DAY 40", "word": "admirable", "meaning": "감탄할 만한", "example": "Steve's business achievements in China are admirable.", "answer": "admirable", "kr": "중국에서 스티브의 사업 성과는 감탄할 만하다.", "fav": false}, {"no": 299, "day": "DAY 40", "word": "suspicious", "meaning": "의심스러운, 수상한", "example": "His friends were suspicious about why he was acting so nice to them.", "answer": "suspicious", "kr": "그의 친구들은 그가 왜 그들에게 그렇게 잘해주는지 수상하게 여겼다.", "fav": false}, {"no": 300, "day": "DAY 40", "word": "narrative", "meaning": "서술의; 이야기로 이루어진; 이야기, 담화", "example": "The book's narrative style makes it easy to read.", "answer": "narrative", "kr": "그 책의 서술 방식은 읽기 쉽게 만든다.", "fav": false}, {"no": 301, "day": "DAY 41", "word": "wage", "meaning": "임금, 급료", "example": "She earns a high monthly wage.", "answer": "wage", "kr": "그녀는 높은 월급을 받는다.", "fav": false}, {"no": 302, "day": "DAY 41", "word": "incentive", "meaning": "포상물, 인센티브; 자극, 동기", "example": "Providing incentives can motivate workers.", "answer": "incentives", "kr": "인센티브 제공은 직원들에게 동기를 부여할 수 있다.", "fav": false}, {"no": 303, "day": "DAY 41", "word": "boost", "meaning": "신장시키다, 북돋우다; 격려, 힘; 증가", "example": "TV ads boost customers' purchasing power.", "answer": "boost", "kr": "TV 광고는 고객의 구매력을 신장시킨다.", "fav": false}, {"no": 304, "day": "DAY 41", "word": "collapse", "meaning": "(가격이) 폭락하다; 무너지다, 붕괴하다", "example": "The stock's value rapidly collapsed.", "answer": "collapsed", "kr": "그 주식의 가치가 급격히 폭락했다.", "fav": false}, {"no": 305, "day": "DAY 41", "word": "thrift", "meaning": "검약, 절약", "example": "We were taught that thrift is a virtue.", "answer": "thrift", "kr": "우리는 절약이 미덕이라고 배웠다.", "fav": false}, {"no": 306, "day": "DAY 41", "word": "constrain", "meaning": "~하게 만들다[강요하다]; 제한하다", "example": "Advertising costs are likely to be constrained by budget.", "answer": "constrained", "kr": "광고 비용은 예산에 의해 제한될 가능성이 높다.", "fav": false}, {"no": 307, "day": "DAY 41", "word": "budget", "meaning": "예산; 예산안", "example": "We need to increase our budget and staff for the new project.", "answer": "budget", "kr": "우리는 새 프로젝트를 위해 예산과 인력을 늘려야 한다.", "fav": false}, {"no": 308, "day": "DAY 41", "word": "auction", "meaning": "경매; 경매하다", "example": "I sold my collection at a public auction.", "answer": "auction", "kr": "나는 공개 경매에서 내 수집품을 팔았다.", "fav": false}, {"no": 309, "day": "DAY 41", "word": "lease", "meaning": "임대차 계약; 임대하다", "example": "I'll tell you the best way to save money when you lease a car.", "answer": "lease", "kr": "차를 임대할 때 돈을 절약하는 가장 좋은 방법을 알려줄게.", "fav": false}, {"no": 310, "day": "DAY 41", "word": "loan", "meaning": "대여; 융자금; 빌려주다", "example": "It is not a good idea to loan money to a friend.", "answer": "loan", "kr": "친구에게 돈을 빌려주는 것은 좋은 생각이 아니다.", "fav": false}, {"no": 311, "day": "DAY 41", "word": "monetary", "meaning": "화폐의, 통화의", "example": "Korea got financial help from the International Monetary Fund(IMF).", "answer": "Monetary", "kr": "한국은 국제통화기금(IMF)으로부터 재정 지원을 받았다.", "fav": false}, {"no": 312, "day": "DAY 41", "word": "stock", "meaning": "주식; 재고; 저장", "example": "This is the lowest the stock market has been in ten years.", "answer": "stock", "kr": "이것은 지난 10년간 주식 시장이 가장 낮았던 수준이다.", "fav": false}, {"no": 313, "day": "DAY 41", "word": "currency", "meaning": "통화, 화폐; (화폐의) 유통", "example": "Many shops at tourist sites accept U.S. currency.", "answer": "currency", "kr": "관광지의 많은 상점이 미국 화폐를 받는다.", "fav": false}, {"no": 314, "day": "DAY 41", "word": "debt", "meaning": "빚, 부채", "example": "I have to pay off my remaining debt this month.", "answer": "debt", "kr": "나는 이번 달에 남은 빚을 갚아야 한다.", "fav": false}, {"no": 315, "day": "DAY 41", "word": "exclusive", "meaning": "독점적인; 배타적인; 고급의, 고가의; 독점 기사", "example": "This special offer is exclusive to our credit card holders.", "answer": "exclusive", "kr": "이 특별 혜택은 우리 신용카드 소지자에게만 독점 제공된다.", "fav": false}, {"no": 316, "day": "DAY 41", "word": "affiliate", "meaning": "(더 큰 회사·기관과) 제휴하다, 연계하다; 지부, 계열사", "example": "The kindergarten is affiliated with the local university.", "answer": "affiliated", "kr": "그 유치원은 지역 대학과 제휴되어 있다.", "fav": false}, {"no": 317, "day": "DAY 41", "word": "enterprise", "meaning": "기업(체), 회사; 사업", "example": "Starting a new enterprise is invariably risky.", "answer": "enterprise", "kr": "새로운 기업을 시작하는 것은 언제나 위험하다.", "fav": false}, {"no": 318, "day": "DAY 41", "word": "commercial", "meaning": "상업의, 무역의; 광고 방송", "example": "The city will become a commercial hub soon.", "answer": "commercial", "kr": "그 도시는 곧 상업 중심지가 될 것이다.", "fav": false}, {"no": 319, "day": "DAY 41", "word": "barter", "meaning": "물물교환; 물물교환을 하다, 교역하다", "example": "Long ago, trading was carried out under the barter system.", "answer": "barter", "kr": "오래전에는 물물교환 방식으로 거래가 이루어졌다.", "fav": false}, {"no": 320, "day": "DAY 41", "word": "incorporate", "meaning": "법인 조직으로 만들다; 포함하다", "example": "The motor company was incorporated in 1903.", "answer": "incorporated", "kr": "그 자동차 회사는 1903년에 법인으로 설립되었다.", "fav": false}, {"no": 321, "day": "DAY 41", "word": "executive", "meaning": "(기업 등의) 경영 간부[이사]; ((the ~)) 행정부; 경영의; 행정의", "example": "He is an executive in our company.", "answer": "executive", "kr": "그는 우리 회사의 임원이다.", "fav": false}, {"no": 322, "day": "DAY 41", "word": "harvest", "meaning": "수확, 추수; 수확하다", "example": "They celebrated the harvest with a feast.", "answer": "harvest", "kr": "그들은 잔치를 열어 수확을 축하했다.", "fav": false}, {"no": 323, "day": "DAY 41", "word": "reap", "meaning": "(농작물을) 베어들이다, 수확하다", "example": "You reap what you sow.", "answer": "reap", "kr": "뿌린 대로 거둔다.", "fav": false}, {"no": 324, "day": "DAY 41", "word": "barn", "meaning": "(곡식 등의) 헛간, 창고", "example": "The barn is used for storing hay and grain.", "answer": "barn", "kr": "그 헛간은 건초와 곡물을 저장하는 데 사용된다.", "fav": false}, {"no": 325, "day": "DAY 41", "word": "barren", "meaning": "불모의; 열매를 맺지 못하는", "example": "They are trying to make the barren land fertile.", "answer": "barren", "kr": "그들은 척박한 땅을 비옥하게 만들려고 노력하고 있다.", "fav": false}, {"no": 326, "day": "DAY 41", "word": "vessel", "meaning": "배, 선박; 용기, 그릇", "example": "The fishing vessels returned to port.", "answer": "vessels", "kr": "어선들이 항구로 돌아왔다.", "fav": false}, {"no": 327, "day": "DAY 41", "word": "freight", "meaning": "운송[적재] 화물; 화물을 싣다; 운송하다", "example": "Packages weighing over 10kg may require additional freight charges.", "answer": "freight", "kr": "10kg이 넘는 소포는 추가 화물 요금이 부과될 수 있다.", "fav": false}, {"no": 328, "day": "DAY 41", "word": "shipment", "meaning": "선적, (화물의) 발송", "example": "You can cancel your order at any time before the shipment has been sent.", "answer": "shipment", "kr": "화물이 발송되기 전이라면 언제든지 주문을 취소할 수 있다.", "fav": false}, {"no": 329, "day": "DAY 41", "word": "transport", "meaning": "수송하다, 나르다; 수송, 운송", "example": "The guy helped me transport my load to the 2nd floor.", "answer": "transport", "kr": "그 남자는 내가 짐을 2층으로 옮기는 것을 도와주었다.", "fav": false}, {"no": 330, "day": "DAY 41", "word": "wagon", "meaning": "4륜차; (노상의) 물건 파는 수레, 짐마차", "example": "The horse pulled a wagon full of hay.", "answer": "wagon", "kr": "말이 건초를 가득 실은 짐마차를 끌었다.", "fav": false}, {"no": 331, "day": "DAY 42", "word": "literature", "meaning": "문예, 문학", "example": "She is interested in classic literature.", "answer": "literature", "kr": "그녀는 고전 문학에 관심이 있다.", "fav": false}, {"no": 332, "day": "DAY 42", "word": "author", "meaning": "저자, 작가", "example": "William Shakespeare is the author of Hamlet.", "answer": "author", "kr": "윌리엄 셰익스피어는 '햄릿'의 저자이다.", "fav": false}, {"no": 333, "day": "DAY 42", "word": "epic", "meaning": "서사시의, 서사체의; 서사시; 대하 소설", "example": "Homer's Iliad is my favorite epic.", "answer": "epic", "kr": "호메로스의 '일리아드'는 내가 가장 좋아하는 서사시이다.", "fav": false}, {"no": 334, "day": "DAY 42", "word": "plot", "meaning": "줄거리; 음모", "example": "The plot of the movie is different from the original book.", "answer": "plot", "kr": "그 영화의 줄거리는 원작 소설과 다르다.", "fav": false}, {"no": 335, "day": "DAY 42", "word": "clue", "meaning": "(이야기·생각의) 줄거리; 실마리, 단서; ~에 암시를 주다", "example": "The police haven't found any clues for the crime.", "answer": "clues", "kr": "경찰은 그 범죄에 대한 단서를 하나도 찾지 못했다.", "fav": false}, {"no": 336, "day": "DAY 42", "word": "summary", "meaning": "요약, 개요", "example": "I wrote a brief summary of the contents.", "answer": "summary", "kr": "나는 내용을 간단히 요약해서 썼다.", "fav": false}, {"no": 337, "day": "DAY 42", "word": "rhyme", "meaning": "운, 압운", "example": "This poem is filled with rhymes and repetitions.", "answer": "rhymes", "kr": "이 시는 운과 반복으로 가득하다.", "fav": false}, {"no": 338, "day": "DAY 42", "word": "metaphor", "meaning": "은유", "example": "He used a lot of wonderful metaphors in his poem.", "answer": "metaphors", "kr": "그는 자신의 시에서 멋진 은유를 많이 사용했다.", "fav": false}, {"no": 339, "day": "DAY 42", "word": "context", "meaning": "문맥; (사건 따위의) 정황", "example": "I guessed the meaning of the word from the context.", "answer": "context", "kr": "나는 문맥을 통해 그 단어의 뜻을 추측했다.", "fav": false}, {"no": 340, "day": "DAY 42", "word": "legendary", "meaning": "전설적인, 아주 유명한; 전설에 나오는", "example": "The performance of the guitarist is legendary.", "answer": "legendary", "kr": "그 기타리스트의 연주는 전설적이다.", "fav": false}, {"no": 341, "day": "DAY 42", "word": "paradox", "meaning": "역설, 패러독스; 모순되는 말", "example": "It is a paradox that such a rich country has so many beggars.", "answer": "paradox", "kr": "그렇게 부유한 나라에 거지가 그렇게 많다는 것은 역설이다.", "fav": false}, {"no": 342, "day": "DAY 42", "word": "aesthetic", "meaning": "미(美)의, 미학의", "example": "The building has a nice design from an aesthetic point of view.", "answer": "aesthetic", "kr": "그 건물은 미적인 관점에서 볼 때 멋진 디자인을 갖고 있다.", "fav": false}, {"no": 343, "day": "DAY 42", "word": "pottery", "meaning": "도기; 도기 제조법", "example": "I have learned how to make a teapot in a pottery class.", "answer": "pottery", "kr": "나는 도예 수업에서 찻주전자 만드는 법을 배웠다.", "fav": false}, {"no": 344, "day": "DAY 42", "word": "sculpture", "meaning": "조각; 조각술", "example": "One of his hobbies is carving sculptures out of wood.", "answer": "sculptures", "kr": "그의 취미 중 하나는 나무로 조각품을 새기는 것이다.", "fav": false}, {"no": 345, "day": "DAY 42", "word": "mo(u)ld", "meaning": "(주조용의) 틀; 곰팡이; 성격; 본뜨다; (성격을) 형성하다", "example": "Pour wax into a mold.", "answer": "mold", "kr": "틀에 왁스를 부어라.", "fav": false}, {"no": 346, "day": "DAY 42", "word": "symphony", "meaning": "교향곡, 심포니", "example": "His cousin plays flute in a symphony orchestra.", "answer": "symphony", "kr": "그의 사촌은 교향악단에서 플루트를 연주한다.", "fav": false}, {"no": 347, "day": "DAY 42", "word": "choir", "meaning": "합창단, (교회의) 성가대", "example": "I sing in the church choir.", "answer": "choir", "kr": "나는 교회 성가대에서 노래를 부른다.", "fav": false}, {"no": 348, "day": "DAY 42", "word": "acid", "meaning": "산(酸); 산성의", "example": "Many pine trees were killed because of acid rain.", "answer": "acid", "kr": "산성비 때문에 많은 소나무가 죽었다.", "fav": false}, {"no": 349, "day": "DAY 42", "word": "litter", "meaning": "잡동사니, 쓰레기; 어지르다", "example": "The room was littered with empty bottles.", "answer": "littered", "kr": "그 방은 빈 병으로 어지럽혀져 있었다.", "fav": false}, {"no": 350, "day": "DAY 42", "word": "consensus", "meaning": "의견 일치, 합의", "example": "It is not easy to achieve a consensus.", "answer": "consensus", "kr": "합의에 도달하는 것은 쉽지 않다.", "fav": false}, {"no": 351, "day": "DAY 42", "word": "landfill", "meaning": "쓰레기 매립(지)", "example": "People who live near landfill sites may be exposed to chemicals.", "answer": "landfill", "kr": "매립지 근처에 사는 사람들은 화학물질에 노출될 수 있다.", "fav": false}, {"no": 352, "day": "DAY 42", "word": "pesticide", "meaning": "살충제, 농약", "example": "You can't remove all the pesticide from fruit when you wash it.", "answer": "pesticide", "kr": "과일을 씻을 때 농약을 완전히 제거할 수는 없다.", "fav": false}, {"no": 353, "day": "DAY 42", "word": "contaminate", "meaning": "더럽히다, 오염시키다", "example": "Pesticides can potentially contaminate the water.", "answer": "contaminate", "kr": "살충제는 물을 오염시킬 가능성이 있다.", "fav": false}, {"no": 354, "day": "DAY 42", "word": "detergent", "meaning": "세제", "example": "Don't use more than you need detergent.", "answer": "detergent", "kr": "필요 이상으로 세제를 사용하지 마라.", "fav": false}, {"no": 355, "day": "DAY 42", "word": "biomass", "meaning": "생물량; 바이오매스(에너지원으로 이용되는 생물체 폐기물)", "example": "Biomass is a renewable resource.", "answer": "Biomass", "kr": "바이오매스는 재생 가능한 자원이다.", "fav": false}, {"no": 356, "day": "DAY 42", "word": "resource", "meaning": "자원; 원천", "example": "Petroleum and coal are limited resources.", "answer": "resources", "kr": "석유와 석탄은 한정된 자원이다.", "fav": false}, {"no": 357, "day": "DAY 42", "word": "intertwine", "meaning": "뒤얽히다; 밀접하게 관련되다", "example": "Environmental and economic issues are inseparably intertwined.", "answer": "intertwined", "kr": "환경 문제와 경제 문제는 서로 뗄 수 없이 얽혀 있다.", "fav": false}, {"no": 358, "day": "DAY 42", "word": "ecosystem", "meaning": "생태계", "example": "Organic food production can help preserve an ecosystem's health.", "answer": "ecosystem", "kr": "유기농 식품 생산은 생태계의 건강을 보존하는 데 도움이 될 수 있다.", "fav": false}, {"no": 359, "day": "DAY 42", "word": "marine", "meaning": "바다의, 바다에 사는", "example": "This documentary focuses on the effects of marine pollution on people.", "answer": "marine", "kr": "이 다큐멘터리는 해양 오염이 사람들에게 미치는 영향에 초점을 맞춘다.", "fav": false}, {"no": 360, "day": "DAY 42", "word": "urban", "meaning": "도시의, 도시에 사는", "example": "Urban populations are growing steadily.", "answer": "Urban", "kr": "도시 인구가 꾸준히 증가하고 있다.", "fav": false}, {"no": 361, "day": "DAY 43", "word": "cheat", "meaning": "속이다; 사기꾼; 속이기", "example": "She cheated on the test by writing notes on the desk.", "answer": "cheated", "kr": "그녀는 책상에 메모를 적어 시험에서 부정행위를 했다.", "fav": false}, {"no": 362, "day": "DAY 43", "word": "criminal", "meaning": "범죄자, 범인; 범죄의", "example": "They were chasing a criminal down the street.", "answer": "criminal", "kr": "그들은 거리에서 범죄자를 쫓고 있었다.", "fav": false}, {"no": 363, "day": "DAY 43", "word": "infringe", "meaning": "(법률·협정 따위를) 어기다, 위반하다, (권리를) 침해하다", "example": "I believe Internet filtering infringes on the freedom of the individual.", "answer": "infringes", "kr": "나는 인터넷 필터링이 개인의 자유를 침해한다고 생각한다.", "fav": false}, {"no": 364, "day": "DAY 43", "word": "kidnap", "meaning": "유괴하다, 납치하다", "example": "They kidnapped foreigners as hostages.", "answer": "kidnapped", "kr": "그들은 인질로 외국인을 납치했다.", "fav": false}, {"no": 365, "day": "DAY 43", "word": "guilty", "meaning": "죄를 범한, 유죄의; 죄책감이 드는", "example": "The jury found them guilty of plotting a terror attack.", "answer": "guilty", "kr": "배심원단은 그들이 테러 공격을 모의한 것에 대해 유죄 판결을 내렸다.", "fav": false}, {"no": 366, "day": "DAY 43", "word": "outrage", "meaning": "격노, 분노; 불법 행위, 난폭; 격분하게 하다", "example": "We should do something to stop the outrage of violence in our schools.", "answer": "outrage", "kr": "우리는 학교 내 폭력의 만행을 멈추기 위해 무언가를 해야 한다.", "fav": false}, {"no": 367, "day": "DAY 43", "word": "rebellion", "meaning": "반란, 폭동", "example": "They raised a rebellion against authority.", "answer": "rebellion", "kr": "그들은 권위에 맞서 반란을 일으켰다.", "fav": false}, {"no": 368, "day": "DAY 43", "word": "revenge", "meaning": "복수; 복수하다", "example": "Billy took revenge on his fellow worker for his betrayal.", "answer": "revenge", "kr": "빌리는 배신에 대해 동료에게 복수했다.", "fav": false}, {"no": 369, "day": "DAY 43", "word": "theft", "meaning": "도둑질, 절도죄", "example": "He was arrested for theft.", "answer": "theft", "kr": "그는 절도로 체포되었다.", "fav": false}, {"no": 370, "day": "DAY 43", "word": "sin", "meaning": "죄; 위반; (죄를) 짓다", "example": "He didn't commit any sins.", "answer": "sins", "kr": "그는 어떤 죄도 저지르지 않았다.", "fav": false}, {"no": 371, "day": "DAY 43", "word": "enact", "meaning": "(법령을) 제정하다, 규정하다; 상연하다", "example": "Congress enacted a special law on smoke-free restaurants last month.", "answer": "enacted", "kr": "의회는 지난달 금연 식당에 관한 특별법을 제정했다.", "fav": false}, {"no": 372, "day": "DAY 43", "word": "forbid", "meaning": "~을 금지하다, 막다", "example": "My mom forbade my brother to go out.", "answer": "forbade", "kr": "우리 엄마는 남동생이 나가는 것을 금지했다.", "fav": false}, {"no": 373, "day": "DAY 43", "word": "legalize", "meaning": "법률화하다, 합법화하다", "example": "Many states have legalized casino gaming.", "answer": "legalized", "kr": "많은 주가 카지노 도박을 합법화했다.", "fav": false}, {"no": 374, "day": "DAY 43", "word": "legislate", "meaning": "법률을 제정하다, 입법하다", "example": "The law was legislated in 1998.", "answer": "legislated", "kr": "그 법은 1998년에 제정되었다.", "fav": false}, {"no": 375, "day": "DAY 43", "word": "code", "meaning": "법전; 규범; 암호", "example": "I received and read the Student Code of Conduct.", "answer": "Code", "kr": "나는 학생 행동 강령을 받아서 읽었다.", "fav": false}, {"no": 376, "day": "DAY 43", "word": "patent", "meaning": "특허(권); 특허를 받은; 특허권을 얻다", "example": "She obtained a patent for her new invention.", "answer": "patent", "kr": "그녀는 자신의 새 발명품에 대한 특허를 얻었다.", "fav": false}, {"no": 377, "day": "DAY 43", "word": "victim", "meaning": "피해자", "example": "Anyone can be a victim of crime.", "answer": "victim", "kr": "누구나 범죄의 피해자가 될 수 있다.", "fav": false}, {"no": 378, "day": "DAY 43", "word": "jury", "meaning": "배심(원단)", "example": "The jury found him guilty of attempting to escape from prison.", "answer": "jury", "kr": "배심원단은 그가 탈옥을 시도한 것에 대해 유죄 판결을 내렸다.", "fav": false}, {"no": 379, "day": "DAY 43", "word": "prosecute", "meaning": "기소하다, 고소하다", "example": "He was prosecuted for murder.", "answer": "prosecuted", "kr": "그는 살인 혐의로 기소되었다.", "fav": false}, {"no": 380, "day": "DAY 43", "word": "sue", "meaning": "소송을 제기하다, 고소하다", "example": "If you don't pay back the money on time, they may sue you.", "answer": "sue", "kr": "제때 돈을 갚지 않으면 그들이 당신을 고소할 수도 있다.", "fav": false}, {"no": 381, "day": "DAY 43", "word": "attorney", "meaning": "변호사", "example": "Even if you have the best attorney in the world, you will lose this lawsuit.", "answer": "attorney", "kr": "세계 최고의 변호사가 있어도 당신은 이 소송에서 질 것이다.", "fav": false}, {"no": 382, "day": "DAY 43", "word": "verify", "meaning": "입증하다", "example": "The police verified the suspect's identity.", "answer": "verified", "kr": "경찰은 용의자의 신원을 확인했다.", "fav": false}, {"no": 383, "day": "DAY 43", "word": "witness", "meaning": "목격자; 목격하다; 증언하다", "example": "A woman witnessed the car accident.", "answer": "witnessed", "kr": "한 여성이 그 교통사고를 목격했다.", "fav": false}, {"no": 384, "day": "DAY 43", "word": "warranty", "meaning": "보증(서)", "example": "The warranty of my car lasts until next February.", "answer": "warranty", "kr": "내 차의 보증 기간은 다음 해 2월까지이다.", "fav": false}, {"no": 385, "day": "DAY 43", "word": "lawsuit", "meaning": "소송", "example": "The actor filed a lawsuit for libel against them.", "answer": "lawsuit", "kr": "그 배우는 그들을 상대로 명예훼손 소송을 제기했다.", "fav": false}, {"no": 386, "day": "DAY 43", "word": "innocent", "meaning": "죄 없는, 결백한", "example": "The suspect insisted that he was innocent.", "answer": "innocent", "kr": "용의자는 자신이 결백하다고 주장했다.", "fav": false}, {"no": 387, "day": "DAY 43", "word": "imprison", "meaning": "투옥하다, 수감하다", "example": "He was imprisoned for injuring his neighbor.", "answer": "imprisoned", "kr": "그는 이웃을 다치게 한 혐의로 수감되었다.", "fav": false}, {"no": 388, "day": "DAY 43", "word": "jail", "meaning": "교도소, 감옥; 투옥하다", "example": "Prisoners are making plans to break out of jail.", "answer": "jail", "kr": "죄수들은 감옥을 탈출할 계획을 세우고 있다.", "fav": false}, {"no": 389, "day": "DAY 43", "word": "penalty", "meaning": "형벌, 벌금", "example": "There will be a penalty for late enrollment.", "answer": "penalty", "kr": "늦게 등록하면 벌금이 부과될 것이다.", "fav": false}, {"no": 390, "day": "DAY 43", "word": "comply", "meaning": "(법·명령 등에) 따르다, 준수하다", "example": "He refused to comply with the rule.", "answer": "comply", "kr": "그는 그 규칙을 따르기를 거부했다.", "fav": false}, {"no": 391, "day": "DAY 44", "word": "ailment", "meaning": "병", "example": "His ailment is not that serious.", "answer": "ailment", "kr": "그의 병은 그리 심각하지 않다.", "fav": false}, {"no": 392, "day": "DAY 44", "word": "epidemic", "meaning": "유행병, 전염병; 유행성의, 전염성의", "example": "An epidemic spreads rapidly across many geographic locations.", "answer": "epidemic", "kr": "전염병은 많은 지역에 빠르게 퍼진다.", "fav": false}, {"no": 393, "day": "DAY 44", "word": "asthma", "meaning": "천식", "example": "He suffers from chronic asthma.", "answer": "asthma", "kr": "그는 만성 천식을 앓고 있다.", "fav": false}, {"no": 394, "day": "DAY 44", "word": "insomnia", "meaning": "불면증", "example": "I've been troubled by insomnia lately.", "answer": "insomnia", "kr": "나는 요즘 불면증으로 고생하고 있다.", "fav": false}, {"no": 395, "day": "DAY 44", "word": "obese", "meaning": "뚱뚱한, 지나치게 살찐", "example": "Obese children should eat a balanced diet.", "answer": "Obese", "kr": "비만 아동은 균형 잡힌 식단을 섭취해야 한다.", "fav": false}, {"no": 396, "day": "DAY 44", "word": "phobia", "meaning": "공포증, (병적인) 공포", "example": "I have a phobia of high places.", "answer": "phobia", "kr": "나는 높은 곳에 대한 공포증이 있다.", "fav": false}, {"no": 397, "day": "DAY 44", "word": "dietary", "meaning": "음식물의, 식이요법의", "example": "Good dietary habits are very important.", "answer": "dietary", "kr": "좋은 식습관은 매우 중요하다.", "fav": false}, {"no": 398, "day": "DAY 44", "word": "deficiency", "meaning": "부족, 결핍", "example": "Hair loss can be caused by a vitamin deficiency.", "answer": "deficiency", "kr": "탈모는 비타민 결핍으로 인해 생길 수 있다.", "fav": false}, {"no": 399, "day": "DAY 44", "word": "paralysis", "meaning": "마비", "example": "She couldn't move because of paralysis in her legs.", "answer": "paralysis", "kr": "그녀는 다리 마비 때문에 움직일 수 없었다.", "fav": false}, {"no": 400, "day": "DAY 44", "word": "allergic", "meaning": "알레르기의, 알레르기 체질의", "example": "I'm allergic to raw peaches but can eat them as long as they are cooked.", "answer": "allergic", "kr": "나는 익힌 복숭아는 먹을 수 있지만 생복숭아에는 알레르기가 있다.", "fav": false}, {"no": 401, "day": "DAY 44", "word": "sanitary", "meaning": "위생의; 위생적인, 청결한", "example": "Cholera is an infectious disease caused by poor sanitary conditions.", "answer": "sanitary", "kr": "콜레라는 불결한 위생 환경 때문에 생기는 전염병이다.", "fav": false}, {"no": 402, "day": "DAY 44", "word": "diabetes", "meaning": "당뇨병", "example": "She suffers from diabetes and has to use insulin.", "answer": "diabetes", "kr": "그녀는 당뇨병을 앓고 있어서 인슐린을 사용해야 한다.", "fav": false}, {"no": 403, "day": "DAY 44", "word": "plague", "meaning": "전염병, 돌림병", "example": "A plague descended on the town, bringing severe illness to many people.", "answer": "plague", "kr": "전염병이 그 마을을 덮쳐 많은 사람에게 심각한 질병을 일으켰다.", "fav": false}, {"no": 404, "day": "DAY 44", "word": "symptom", "meaning": "증상, 증후", "example": "He showed some symptoms of depression.", "answer": "symptoms", "kr": "그는 우울증 증상을 좀 보였다.", "fav": false}, {"no": 405, "day": "DAY 44", "word": "chronic", "meaning": "(병이) 만성인, 고질인", "example": "This treatment is appropriate for patients with chronic headaches.", "answer": "chronic", "kr": "이 치료법은 만성 두통이 있는 환자에게 적합하다.", "fav": false}, {"no": 406, "day": "DAY 44", "word": "swell", "meaning": "붓다, 부풀다; 증가하다; 증가, 팽창", "example": "The bug bite is beginning to swell up.", "answer": "swell", "kr": "벌레 물린 자리가 붓기 시작했다.", "fav": false}, {"no": 407, "day": "DAY 44", "word": "fatigue", "meaning": "(심신의) 피로, 피곤", "example": "He's been suffering from fatigue for several months.", "answer": "fatigue", "kr": "그는 몇 달째 피로에 시달려 왔다.", "fav": false}, {"no": 408, "day": "DAY 44", "word": "sneeze", "meaning": "재채기; 재채기하다", "example": "I sneeze constantly, especially in the morning.", "answer": "sneeze", "kr": "나는 특히 아침에 계속 재채기를 한다.", "fav": false}, {"no": 409, "day": "DAY 44", "word": "vomit", "meaning": "구토; 구토하다", "example": "I vomited up all that I ate for lunch.", "answer": "vomited", "kr": "나는 점심에 먹은 것을 전부 토했다.", "fav": false}, {"no": 410, "day": "DAY 44", "word": "cure", "meaning": "치료(법); 치료하다", "example": "Most cancers can be completely cured if they are found early.", "answer": "cured", "kr": "대부분의 암은 조기에 발견되면 완치될 수 있다.", "fav": false}, {"no": 411, "day": "DAY 44", "word": "remedy", "meaning": "치료(법), 의약(품)", "example": "Ginger is a well-known home remedy for a sore throat.", "answer": "remedy", "kr": "생강은 인후통에 잘 알려진 민간요법이다.", "fav": false}, {"no": 412, "day": "DAY 44", "word": "surgery", "meaning": "수술", "example": "My mother just had surgery and needs to rest.", "answer": "surgery", "kr": "우리 엄마는 수술을 막 받아서 쉬어야 한다.", "fav": false}, {"no": 413, "day": "DAY 44", "word": "tablet", "meaning": "알약", "example": "He takes vitamin C tablets once a day.", "answer": "tablets", "kr": "그는 하루에 한 번 비타민 C 알약을 먹는다.", "fav": false}, {"no": 414, "day": "DAY 44", "word": "heal", "meaning": "고치다, 치료하다; (상처 등이) 낫다", "example": "The wound will soon heal because it is not that serious.", "answer": "heal", "kr": "그 상처는 심각하지 않아서 곧 나을 것이다.", "fav": false}, {"no": 415, "day": "DAY 44", "word": "scar", "meaning": "상처, 흉터; 상처 자국이 남다", "example": "The scars on his face are almost gone now.", "answer": "scars", "kr": "그의 얼굴에 있던 흉터는 이제 거의 사라졌다.", "fav": false}, {"no": 416, "day": "DAY 44", "word": "suicide", "meaning": "자살", "example": "He attempted suicide by taking poison.", "answer": "suicide", "kr": "그는 독을 먹고 자살을 시도했다.", "fav": false}, {"no": 417, "day": "DAY 44", "word": "choke", "meaning": "숨통을 끊다, 질식시키다", "example": "The smoke from the fire choked many people.", "answer": "choked", "kr": "화재로 인한 연기가 많은 사람을 질식시켰다.", "fav": false}, {"no": 418, "day": "DAY 44", "word": "drown", "meaning": "물에 빠지다, 익사하다", "example": "A man rescued a 5-year-old boy from drowning.", "answer": "drowning", "kr": "한 남자가 물에 빠진 5살 소년을 구조했다.", "fav": false}, {"no": 419, "day": "DAY 44", "word": "wreck", "meaning": "파괴; 난파; 난파시키다", "example": "A voyaging ship was wrecked during a storm at sea.", "answer": "wrecked", "kr": "항해 중이던 배가 바다 폭풍 속에서 난파되었다.", "fav": false}, {"no": 420, "day": "DAY 44", "word": "wound", "meaning": "상처, 부상; (마음의) 상처, 고통; 상처를 입히다", "example": "The doctor cleaned and applied medicine to the wound.", "answer": "wound", "kr": "의사가 그 상처를 소독하고 약을 발랐다.", "fav": false}, {"no": 421, "day": "DAY 45", "word": "chill", "meaning": "추위; 추운, 한기가 도는", "example": "Use these extra blankets when you feel a chill.", "answer": "chill", "kr": "한기가 느껴질 때 이 여분의 담요를 사용하세요.", "fav": false}, {"no": 422, "day": "DAY 45", "word": "damp", "meaning": "축축한, 습기 있는; 축축한 곳, 물기; 낙담", "example": "Put a damp cloth on your forehead to reduce a fever.", "answer": "damp", "kr": "열을 내리려면 이마에 축축한 천을 올려라.", "fav": false}, {"no": 423, "day": "DAY 45", "word": "hail", "meaning": "우박, 싸락눈", "example": "The hail struck throughout the whole city.", "answer": "hail", "kr": "우박이 도시 전역을 강타했다.", "fav": false}, {"no": 424, "day": "DAY 45", "word": "humid", "meaning": "습기 찬, 습한", "example": "The weather is humid and cloudy today.", "answer": "humid", "kr": "오늘 날씨는 습하고 흐리다.", "fav": false}, {"no": 425, "day": "DAY 45", "word": "moist", "meaning": "습한, 축축한", "example": "The rain made the soil moist, so it would be good to plant the seeds now.", "answer": "moist", "kr": "비로 흙이 촉촉해졌으니 지금 씨앗을 심으면 좋을 것이다.", "fav": false}, {"no": 426, "day": "DAY 45", "word": "turbulence", "meaning": "폭풍 상태; 난기류; 소란", "example": "When experiencing turbulence on a plane, you must wear your seat belt.", "answer": "turbulence", "kr": "비행기에서 난기류를 겪을 때는 안전벨트를 착용해야 한다.", "fav": false}, {"no": 427, "day": "DAY 45", "word": "frost", "meaning": "얼어붙는 추위; 서리, 서릿발", "example": "Severe frost destroyed grain in some areas.", "answer": "frost", "kr": "심한 서리가 일부 지역의 곡물을 망쳤다.", "fav": false}, {"no": 428, "day": "DAY 45", "word": "drought", "meaning": "가뭄", "example": "The drought dried up the soil and raised its acidity.", "answer": "drought", "kr": "가뭄이 토양을 마르게 하고 산성도를 높였다.", "fav": false}, {"no": 429, "day": "DAY 45", "word": "breeze", "meaning": "산들바람", "example": "The sun is shining and a breeze is blowing gently through the trees.", "answer": "breeze", "kr": "해가 비치고 산들바람이 나무 사이로 부드럽게 불고 있다.", "fav": false}, {"no": 430, "day": "DAY 45", "word": "tropic", "meaning": "((the ~s)) 열대지방", "example": "Many kinds of rare plants can be found in the tropics.", "answer": "tropics", "kr": "열대지방에서는 다양한 종류의 희귀 식물을 찾을 수 있다.", "fav": false}, {"no": 431, "day": "DAY 45", "word": "disaster", "meaning": "재해, 천재(天災)", "example": "Last Sunday's earthquake was a terrible natural disaster.", "answer": "disaster", "kr": "지난 일요일의 지진은 끔찍한 자연재해였다.", "fav": false}, {"no": 432, "day": "DAY 45", "word": "violent", "meaning": "격렬한, 맹렬한; 폭력적인", "example": "A violent wind will blow tonight.", "answer": "violent", "kr": "오늘 밤 격렬한 바람이 불 것이다.", "fav": false}, {"no": 433, "day": "DAY 45", "word": "herd", "meaning": "(짐승의) 떼, 무리; 떼를 짓다", "example": "There is a herd of cows grazing in the field.", "answer": "herd", "kr": "들판에 소 떼가 풀을 뜯고 있다.", "fav": false}, {"no": 434, "day": "DAY 45", "word": "species", "meaning": "(생물의) 종(種)", "example": "New species are still being discovered in the rainforest every year.", "answer": "species", "kr": "열대우림에서는 매년 새로운 종이 계속 발견되고 있다.", "fav": false}, {"no": 435, "day": "DAY 45", "word": "mammal", "meaning": "포유류, 포유동물", "example": "Blue whales are the largest mammals on Earth.", "answer": "mammals", "kr": "흰긴수염고래는 지구상에서 가장 큰 포유류이다.", "fav": false}, {"no": 436, "day": "DAY 45", "word": "reptile", "meaning": "파충류", "example": "Almost all reptiles are cold-blooded.", "answer": "reptile", "kr": "거의 모든 파충류는 냉혈동물이다.", "fav": false}, {"no": 437, "day": "DAY 45", "word": "beast", "meaning": "동물, 짐승", "example": "A wild beast came running out of the woods.", "answer": "beast", "kr": "야생 짐승 한 마리가 숲에서 뛰쳐나왔다.", "fav": false}, {"no": 438, "day": "DAY 45", "word": "cattle", "meaning": "소; 가축", "example": "The boys drove the cattle to their pasture.", "answer": "cattle", "kr": "소년들은 소들을 목초지로 몰았다.", "fav": false}, {"no": 439, "day": "DAY 45", "word": "roar", "meaning": "으르렁거리다, 울리다; 고함치다; 포효", "example": "Male lions roar to protect their families.", "answer": "roar", "kr": "수사자는 가족을 지키기 위해 으르렁거린다.", "fav": false}, {"no": 440, "day": "DAY 45", "word": "hatch", "meaning": "깨다, 부화하다; (배·비행기의) 출입구", "example": "Newly hatched turtles use the moon to guide them towards the sea.", "answer": "hatched", "kr": "갓 부화한 거북이는 달을 이용해 바다로 향한다.", "fav": false}, {"no": 441, "day": "DAY 45", "word": "livestock", "meaning": "가축(류)", "example": "My grandparents live in the country raising livestock.", "answer": "livestock", "kr": "내 조부모님은 시골에서 가축을 기르며 사신다.", "fav": false}, {"no": 442, "day": "DAY 45", "word": "ripe", "meaning": "여문, 익은", "example": "By late August, the wheat is ripe and golden.", "answer": "ripe", "kr": "8월 말이 되면 밀이 익어 황금빛이 된다.", "fav": false}, {"no": 443, "day": "DAY 45", "word": "bunch", "meaning": "송이, 다발", "example": "I bought a bunch of bananas.", "answer": "bunch", "kr": "나는 바나나 한 송이를 샀다.", "fav": false}, {"no": 444, "day": "DAY 45", "word": "weed", "meaning": "잡초; 잡초를 뽑다", "example": "You'll need to pull the weeds until the plants are well established.", "answer": "weeds", "kr": "식물이 잘 자리 잡을 때까지 잡초를 뽑아줘야 한다.", "fav": false}, {"no": 445, "day": "DAY 45", "word": "grain", "meaning": "곡식알, 낟알; 곡물, 곡류", "example": "I usually eat rice mixed with other grains.", "answer": "grains", "kr": "나는 보통 다른 곡물을 섞은 쌀을 먹는다.", "fav": false}, {"no": 446, "day": "DAY 45", "word": "predator", "meaning": "포식자, 포식 동물; 약탈자", "example": "The baby turtle eventually became food for a predator.", "answer": "predator", "kr": "그 아기 거북이는 결국 포식자의 먹이가 되었다.", "fav": false}, {"no": 447, "day": "DAY 45", "word": "cave", "meaning": "굴, 동굴", "example": "Bats hung upside down in the dark cave.", "answer": "cave", "kr": "박쥐들이 어두운 동굴 안에서 거꾸로 매달려 있었다.", "fav": false}, {"no": 448, "day": "DAY 45", "word": "dawn", "meaning": "새벽, 동틀 녘; 시작, 발단; 날이 새다", "example": "They planned to set off at dawn.", "answer": "dawn", "kr": "그들은 새벽에 출발할 계획이었다.", "fav": false}, {"no": 449, "day": "DAY 45", "word": "cliff", "meaning": "(해안 따위의) 벼랑, 절벽", "example": "A woman is climbing up a cliff.", "answer": "cliff", "kr": "한 여성이 절벽을 오르고 있다.", "fav": false}, {"no": 450, "day": "DAY 45", "word": "copper", "meaning": "구리, 동", "example": "A penny is made of copper.", "answer": "copper", "kr": "동전은 구리로 만들어진다.", "fav": false}, {"no": 451, "day": "DAY 46", "word": "courteous", "meaning": "예의 바른, 공손한", "example": "He is always courteous to his customers.", "answer": "courteous", "kr": "그는 고객들에게 늘 예의 바르다.", "fav": false}, {"no": 452, "day": "DAY 46", "word": "deliberate", "meaning": "신중한; 고의의, 계획적인", "example": "He is very deliberate when he invests his money.", "answer": "deliberate", "kr": "그는 돈을 투자할 때 매우 신중하다.", "fav": false}, {"no": 453, "day": "DAY 46", "word": "intimate", "meaning": "친밀한, 친숙한", "example": "I have been intimate her acquaintance for a long time.", "answer": "intimate", "kr": "나는 오랫동안 그녀와 친분을 유지해 왔다.", "fav": false}, {"no": 454, "day": "DAY 46", "word": "tolerant", "meaning": "관대한, 아량이 있는", "example": "She is a tolerant person.", "answer": "tolerant", "kr": "그녀는 관대한 사람이다.", "fav": false}, {"no": 455, "day": "DAY 46", "word": "masculine", "meaning": "남성의; 남자다운", "example": "My sister has a masculine voice.", "answer": "masculine", "kr": "내 여동생은 남자 같은 목소리를 갖고 있다.", "fav": false}, {"no": 456, "day": "DAY 46", "word": "gorgeous", "meaning": "매력적인, 멋진; 호화로운", "example": "A nice country house with gorgeous gardens is for sale.", "answer": "gorgeous", "kr": "멋진 정원이 있는 근사한 시골집이 매물로 나와 있다.", "fav": false}, {"no": 457, "day": "DAY 46", "word": "merciless", "meaning": "무자비한, 잔인한", "example": "The murderer was sentenced to life imprisonment for his merciless crime.", "answer": "merciless", "kr": "그 살인범은 무자비한 범죄로 종신형을 선고받았다.", "fav": false}, {"no": 458, "day": "DAY 46", "word": "sturdy", "meaning": "튼튼한, 힘센; 견고한", "example": "Despite its age, the old horse is still sturdy.", "answer": "sturdy", "kr": "나이가 많음에도 불구하고 그 늙은 말은 여전히 튼튼하다.", "fav": false}, {"no": 459, "day": "DAY 46", "word": "ambitious", "meaning": "대망을 품은, 야망을 가진", "example": "Boys, be ambitious!", "answer": "ambitious", "kr": "소년들이여, 야망을 가져라!", "fav": false}, {"no": 460, "day": "DAY 46", "word": "faithful", "meaning": "충실한; 신의 있는", "example": "A person who finds a faithful friend finds a treasure.", "answer": "faithful", "kr": "신의 있는 친구를 찾은 사람은 보물을 찾은 것이다.", "fav": false}, {"no": 461, "day": "DAY 46", "word": "sincere", "meaning": "성실한; 참된", "example": "He seems sincere in all he does.", "answer": "sincere", "kr": "그는 하는 모든 일에서 성실해 보인다.", "fav": false}, {"no": 462, "day": "DAY 46", "word": "frank", "meaning": "솔직한, 가식이 없는", "example": "Janet had a frank talk with her two sons.", "answer": "frank", "kr": "재닛은 두 아들과 솔직한 대화를 나누었다.", "fav": false}, {"no": 463, "day": "DAY 46", "word": "eager", "meaning": "열망[갈망]하는; 열심인", "example": "Ray is eager to learn foreign languages.", "answer": "eager", "kr": "레이는 외국어를 배우는 데 열심이다.", "fav": false}, {"no": 464, "day": "DAY 46", "word": "loyal", "meaning": "충성스러운, 충의가 있는", "example": "Employers want workers who are loyal.", "answer": "loyal", "kr": "고용주들은 충성스러운 직원을 원한다.", "fav": false}, {"no": 465, "day": "DAY 46", "word": "sensible", "meaning": "분별 있는, 현명한", "example": "He seems to be a very sensible man.", "answer": "sensible", "kr": "그는 매우 분별 있는 사람인 것 같다.", "fav": false}, {"no": 466, "day": "DAY 46", "word": "mischievous", "meaning": "장난이 심한, 개구쟁이의", "example": "My brother is active and mischievous.", "answer": "mischievous", "kr": "내 남동생은 활동적이고 장난이 심하다.", "fav": false}, {"no": 467, "day": "DAY 46", "word": "naughty", "meaning": "말을 듣지 않는", "example": "My sister is a naughty girl.", "answer": "naughty", "kr": "내 여동생은 말을 안 듣는 아이다.", "fav": false}, {"no": 468, "day": "DAY 46", "word": "wicked", "meaning": "사악한; 심술궂은", "example": "Don't do such a wicked thing.", "answer": "wicked", "kr": "그런 사악한 짓을 하지 마라.", "fav": false}, {"no": 469, "day": "DAY 46", "word": "nasty", "meaning": "비열한; 더러운, 불쾌한", "example": "She is a nasty person.", "answer": "nasty", "kr": "그녀는 비열한 사람이다.", "fav": false}, {"no": 470, "day": "DAY 46", "word": "brutal", "meaning": "야만적인; 잔혹한, 무자비한", "example": "Some say that the death penalty is a brutal punishment.", "answer": "brutal", "kr": "어떤 사람들은 사형이 잔혹한 형벌이라고 말한다.", "fav": false}, {"no": 471, "day": "DAY 46", "word": "fierce", "meaning": "사나운, 거친; 잔인한", "example": "This dog is very fierce, so stay away from it.", "answer": "fierce", "kr": "이 개는 매우 사나우니 가까이 가지 마라.", "fav": false}, {"no": 472, "day": "DAY 46", "word": "greedy", "meaning": "욕심 많은, 탐욕스러운", "example": "He is very greedy for money and power.", "answer": "greedy", "kr": "그는 돈과 권력에 매우 탐욕스럽다.", "fav": false}, {"no": 473, "day": "DAY 46", "word": "stubborn", "meaning": "완고한, 고집 센", "example": "He is too stubborn to admit his mistakes.", "answer": "stubborn", "kr": "그는 너무 고집이 세서 자신의 실수를 인정하지 않는다.", "fav": false}, {"no": 474, "day": "DAY 46", "word": "arrogant", "meaning": "건방진, 거만한", "example": "He seems arrogant because he is too confident in his decisions.", "answer": "arrogant", "kr": "그는 자신의 결정에 지나치게 자신만만해서 거만해 보인다.", "fav": false}, {"no": 475, "day": "DAY 46", "word": "clumsy", "meaning": "어색한; 서투른", "example": "He murmured a clumsy apology for his rudeness.", "answer": "clumsy", "kr": "그는 자신의 무례함에 대해 서투르게 사과했다.", "fav": false}, {"no": 476, "day": "DAY 46", "word": "awkward", "meaning": "다루기 힘든; 어색한; 서투른, 미숙한", "example": "I don't want to be in an awkward situation.", "answer": "awkward", "kr": "나는 어색한 상황에 처하고 싶지 않다.", "fav": false}, {"no": 477, "day": "DAY 46", "word": "naive", "meaning": "순진한, 천진난만한", "example": "She is so naive that she believes everything people say.", "answer": "naive", "kr": "그녀는 너무 순진해서 사람들이 하는 모든 말을 믿는다.", "fav": false}, {"no": 478, "day": "DAY 46", "word": "timid", "meaning": "겁 많은, 소심한", "example": "Some people are too timid to speak in front of others.", "answer": "timid", "kr": "어떤 사람들은 너무 소심해서 다른 사람들 앞에서 말을 못 한다.", "fav": false}, {"no": 479, "day": "DAY 46", "word": "peculiar", "meaning": "이상한, 별난; 특이한, 독특한", "example": "Her peculiar dress distinguished her among the people at the party.", "answer": "peculiar", "kr": "그녀의 독특한 옷차림은 파티에서 그녀를 돋보이게 했다.", "fav": false}, {"no": 480, "day": "DAY 46", "word": "indulgent", "meaning": "관대한", "example": "Rebecca is indulgent with children, even if they misbehave.", "answer": "indulgent", "kr": "레베카는 아이들이 버릇없이 굴어도 관대하게 대한다.", "fav": false}, {"no": 481, "day": "DAY 47", "word": "abdomen", "meaning": "배, 복부", "example": "I sometimes have a pain in my abdomen.", "answer": "abdomen", "kr": "나는 가끔 복부에 통증이 있다.", "fav": false}, {"no": 482, "day": "DAY 47", "word": "artery", "meaning": "동맥", "example": "High calcium levels in the arteries may signal a serious heart attack.", "answer": "arteries", "kr": "동맥의 칼슘 수치가 높으면 심각한 심장마비의 신호일 수 있다.", "fav": false}, {"no": 483, "day": "DAY 47", "word": "cell", "meaning": "세포", "example": "A cell divides to produce two genetically identical cells.", "answer": "cell", "kr": "세포는 분열하여 유전적으로 동일한 두 개의 세포를 만든다.", "fav": false}, {"no": 484, "day": "DAY 47", "word": "bone", "meaning": "뼈, 골격", "example": "There are 206 bones in the human body.", "answer": "bones", "kr": "인체에는 206개의 뼈가 있다.", "fav": false}, {"no": 485, "day": "DAY 47", "word": "gene", "meaning": "유전자", "example": "The mutated gene is passed down through a family.", "answer": "gene", "kr": "돌연변이 유전자는 가계를 통해 대물림된다.", "fav": false}, {"no": 486, "day": "DAY 47", "word": "immune", "meaning": "면역성의, 면역의", "example": "Once you're exposed to a virus, your immune system reacts to fight it off.", "answer": "immune", "kr": "바이러스에 노출되면 면역 체계가 그것을 물리치기 위해 반응한다.", "fav": false}, {"no": 487, "day": "DAY 47", "word": "kidney", "meaning": "신장, 콩팥", "example": "A normal individual has two kidneys.", "answer": "kidneys", "kr": "정상인은 신장이 두 개 있다.", "fav": false}, {"no": 488, "day": "DAY 47", "word": "limb", "meaning": "팔다리", "example": "Both of the limbs on the right side of his body were paralyzed.", "answer": "limbs", "kr": "그의 몸 오른쪽 팔다리 둘 다 마비되었다.", "fav": false}, {"no": 489, "day": "DAY 47", "word": "liver", "meaning": "간", "example": "Her mother died from liver cancer.", "answer": "liver", "kr": "그녀의 어머니는 간암으로 돌아가셨다.", "fav": false}, {"no": 490, "day": "DAY 47", "word": "wrist", "meaning": "손목", "example": "The child slipped on the ice and broke his wrist.", "answer": "wrist", "kr": "그 아이는 얼음 위에서 미끄러져 손목이 부러졌다.", "fav": false}, {"no": 491, "day": "DAY 47", "word": "beard", "meaning": "턱수염", "example": "He shaved his beard before his blind date.", "answer": "beard", "kr": "그는 소개팅 전에 턱수염을 밀었다.", "fav": false}, {"no": 492, "day": "DAY 47", "word": "lung", "meaning": "폐, 허파", "example": "Cigarette smoking accelerates lung disease.", "answer": "lung", "kr": "흡연은 폐 질환을 가속화시킨다.", "fav": false}, {"no": 493, "day": "DAY 47", "word": "muscle", "meaning": "근육", "example": "Stretching helps relax your tense muscles.", "answer": "muscles", "kr": "스트레칭은 긴장된 근육을 이완시키는 데 도움이 된다.", "fav": false}, {"no": 494, "day": "DAY 47", "word": "throat", "meaning": "목구멍, 인후", "example": "My throat hurt from cheering so hard.", "answer": "throat", "kr": "나는 너무 열심히 응원해서 목이 아팠다.", "fav": false}, {"no": 495, "day": "DAY 47", "word": "slender", "meaning": "가느다란, 날씬한; 가냘픈, 연약한", "example": "The model has long, slender legs.", "answer": "slender", "kr": "그 모델은 길고 날씬한 다리를 갖고 있다.", "fav": false}, {"no": 496, "day": "DAY 47", "word": "thumb", "meaning": "엄지손가락", "example": "The baby is sucking its thumb.", "answer": "thumb", "kr": "아기가 엄지손가락을 빨고 있다.", "fav": false}, {"no": 497, "day": "DAY 47", "word": "wrinkle", "meaning": "주름; 주름살 지다", "example": "It is natural to have wrinkles as we get older.", "answer": "wrinkles", "kr": "나이가 들면서 주름이 생기는 것은 자연스러운 일이다.", "fav": false}, {"no": 498, "day": "DAY 47", "word": "mustache", "meaning": "콧수염", "example": "The good-looking man with the mustache is my boyfriend.", "answer": "mustache", "kr": "콧수염이 있는 그 잘생긴 남자가 내 남자친구이다.", "fav": false}, {"no": 499, "day": "DAY 47", "word": "thin", "meaning": "얇은, 가느다란; 여윈, 수척한", "example": "He is getting thinner and thinner because of his illness.", "answer": "thinner", "kr": "그는 병 때문에 점점 더 말라가고 있다.", "fav": false}, {"no": 500, "day": "DAY 47", "word": "thigh", "meaning": "넓적다리, 허벅다리", "example": "He bumped into the desk, and his thigh was bruised.", "answer": "thigh", "kr": "그는 책상에 부딪혀서 허벅지에 멍이 들었다.", "fav": false}, {"no": 501, "day": "DAY 47", "word": "joint", "meaning": "관절; 공동의, 연합의", "example": "My joints ache when it rains.", "answer": "joints", "kr": "비가 오면 내 관절이 아프다.", "fav": false}, {"no": 502, "day": "DAY 47", "word": "organism", "meaning": "유기체, 생물", "example": "Bacteria are single-celled organisms.", "answer": "organisms", "kr": "박테리아는 단세포 생물이다.", "fav": false}, {"no": 503, "day": "DAY 47", "word": "oral", "meaning": "입의; 구술의; 구술시험", "example": "Good oral hygiene is very important.", "answer": "oral", "kr": "좋은 구강 위생은 매우 중요하다.", "fav": false}, {"no": 504, "day": "DAY 47", "word": "nerve", "meaning": "신경", "example": "Some patients with Alzheimer's disease have damaged visual nerves.", "answer": "nerves", "kr": "알츠하이머병을 앓는 일부 환자는 시신경이 손상되어 있다.", "fav": false}, {"no": 505, "day": "DAY 47", "word": "slim", "meaning": "날씬한", "example": "My mother exercises every day to maintain her slim figure.", "answer": "slim", "kr": "우리 어머니는 날씬한 몸매를 유지하기 위해 매일 운동하신다.", "fav": false}, {"no": 506, "day": "DAY 47", "word": "spine", "meaning": "척추, 등뼈", "example": "Always hold yourself straight to avoid having a crooked spine.", "answer": "spine", "kr": "척추가 휘지 않도록 항상 바르게 서 있어라.", "fav": false}, {"no": 507, "day": "DAY 47", "word": "pulse", "meaning": "맥박", "example": "A doctor is taking the pulse of the man lying on the floor.", "answer": "pulse", "kr": "의사가 바닥에 누워 있는 남자의 맥박을 재고 있다.", "fav": false}, {"no": 508, "day": "DAY 47", "word": "digest", "meaning": "소화하다[되다]", "example": "Grass is difficult for many animals to digest.", "answer": "digest", "kr": "많은 동물에게 풀은 소화하기 어렵다.", "fav": false}, {"no": 509, "day": "DAY 47", "word": "organ", "meaning": "[생물] 기관, 장기", "example": "The rate of organ donation can't keep pace with the number of people needing transplants.", "answer": "organ", "kr": "장기 기증 비율이 이식이 필요한 사람들의 수를 따라가지 못한다.", "fav": false}, {"no": 510, "day": "DAY 47", "word": "skeleton", "meaning": "해골, 골격; 윤곽, 개략", "example": "The curator excavated the skeletons from the site of the battle.", "answer": "skeletons", "kr": "큐레이터는 전투가 있었던 유적지에서 유골을 발굴했다.", "fav": false}, {"no": 511, "day": "DAY 48", "word": "battlefield", "meaning": "전쟁터, 싸움터", "example": "The whole country turned into a battlefield.", "answer": "battlefield", "kr": "나라 전체가 전쟁터로 변했다.", "fav": false}, {"no": 512, "day": "DAY 48", "word": "border", "meaning": "경계, 국경; 가장자리; 접경[인접]하다", "example": "The army of the northern kingdom violated the border.", "answer": "border", "kr": "북쪽 왕국의 군대가 국경을 침범했다.", "fav": false}, {"no": 513, "day": "DAY 48", "word": "bombard", "meaning": "포격[폭격]하다", "example": "We will bombard the fort unless you surrender.", "answer": "bombard", "kr": "항복하지 않으면 우리는 요새를 포격할 것이다.", "fav": false}, {"no": 514, "day": "DAY 48", "word": "slaughter", "meaning": "대학살; 대학살하다; (가축을) 도살하다", "example": "During the war, Jews were slaughtered or exiled.", "answer": "slaughtered", "kr": "전쟁 중에 유대인들은 학살당하거나 추방당했다.", "fav": false}, {"no": 515, "day": "DAY 48", "word": "defeat", "meaning": "패배시키다, 쳐부수다; 패배", "example": "We were defeated by the foreign enemy.", "answer": "defeated", "kr": "우리는 외국의 적에게 패배했다.", "fav": false}, {"no": 516, "day": "DAY 48", "word": "devastate", "meaning": "황폐시키다, 철저하게 파괴하다", "example": "The civil war devastated transportation and water supply facilities.", "answer": "devastated", "kr": "내전은 교통과 상수도 시설을 황폐화시켰다.", "fav": false}, {"no": 517, "day": "DAY 48", "word": "martial", "meaning": "전쟁의; 군의, 군사의", "example": "The governor proclaimed martial law in the colony.", "answer": "martial", "kr": "주지사는 그 식민지에 계엄령을 선포했다.", "fav": false}, {"no": 518, "day": "DAY 48", "word": "assault", "meaning": "습격, 급습; 급습하다, 공격하다", "example": "They are planning to assault their enemy tonight.", "answer": "assault", "kr": "그들은 오늘 밤 적을 습격할 계획이다.", "fav": false}, {"no": 519, "day": "DAY 48", "word": "foe", "meaning": "적", "example": "A friend today may become a foe tomorrow.", "answer": "foe", "kr": "오늘의 친구가 내일의 적이 될 수도 있다.", "fav": false}, {"no": 520, "day": "DAY 48", "word": "salute", "meaning": "경례; 인사; [군사] 경례하다; 인사하다", "example": "The soldiers stopped and saluted the general.", "answer": "saluted", "kr": "군인들은 멈추어 장군에게 경례했다.", "fav": false}, {"no": 521, "day": "DAY 48", "word": "triumph", "meaning": "승리(감); 승리를 차지하다", "example": "Our team was carried away by our triumph.", "answer": "triumph", "kr": "우리 팀은 승리감에 도취되었다.", "fav": false}, {"no": 522, "day": "DAY 48", "word": "spear", "meaning": "창, 투창; 창으로 찌르다", "example": "Two soldiers are standing and holding spears.", "answer": "spears", "kr": "두 명의 군인이 서서 창을 들고 있다.", "fav": false}, {"no": 523, "day": "DAY 48", "word": "shield", "meaning": "방패; 방어물; 보호하다", "example": "The enemy was armed with spears and shields.", "answer": "shields", "kr": "적은 창과 방패로 무장하고 있었다.", "fav": false}, {"no": 524, "day": "DAY 48", "word": "cannon", "meaning": "대포", "example": "They fired cannons toward the enemy combatants.", "answer": "cannons", "kr": "그들은 적 전투원을 향해 대포를 발사했다.", "fav": false}, {"no": 525, "day": "DAY 48", "word": "nuclear", "meaning": "핵의; 핵무기의", "example": "African countries signed a ban on nuclear arms proliferation in Africa.", "answer": "nuclear", "kr": "아프리카 국가들은 아프리카 내 핵무기 확산 금지에 서명했다.", "fav": false}, {"no": 526, "day": "DAY 48", "word": "troop", "meaning": "무리, 떼; ((~s)) 군대", "example": "The council agreed to withdraw troops from the country immediately.", "answer": "troops", "kr": "의회는 그 나라에서 즉시 군대를 철수하는 데 동의했다.", "fav": false}, {"no": 527, "day": "DAY 48", "word": "strategy", "meaning": "전략, 전술; 계략, 술수", "example": "We won the war because of our well-calculated strategy.", "answer": "strategy", "kr": "우리는 잘 계산된 전략 덕분에 전쟁에서 승리했다.", "fav": false}, {"no": 528, "day": "DAY 48", "word": "tactics", "meaning": "전술(학), 병법; 술책, 책략", "example": "Their tactics were designed to stun and quickly overpower the opposition.", "answer": "tactics", "kr": "그들의 전술은 상대를 기절시키고 재빨리 제압하도록 고안되었다.", "fav": false}, {"no": 529, "day": "DAY 48", "word": "authority", "meaning": "권위, 권한; ((~s)) 당국, 관헌; 권위자, 대가", "example": "That's out of my authority.", "answer": "authority", "kr": "그것은 내 권한 밖의 일이다.", "fav": false}, {"no": 530, "day": "DAY 48", "word": "reign", "meaning": "통치 기간; 통치[지배]하다; 군림하다", "example": "The reign of Mary I of England was one of the most cruel in the country's history.", "answer": "reign", "kr": "영국의 메리 1세의 통치는 그 나라 역사상 가장 잔혹한 시기 중 하나였다.", "fav": false}, {"no": 531, "day": "DAY 48", "word": "embassy", "meaning": "대사관", "example": "If you lose your passport in a foreign country, contact your embassy.", "answer": "embassy", "kr": "외국에서 여권을 잃어버리면 대사관에 연락하라.", "fav": false}, {"no": 532, "day": "DAY 48", "word": "dignity", "meaning": "존엄, 위엄; 엄숙함", "example": "She always behaves with dignity.", "answer": "dignity", "kr": "그녀는 항상 위엄 있게 행동한다.", "fav": false}, {"no": 533, "day": "DAY 48", "word": "federal", "meaning": "연방의, 연방제의; 연방 정부의", "example": "Smoking in public places is illegal according to federal law.", "answer": "federal", "kr": "공공장소에서의 흡연은 연방법에 따라 불법이다.", "fav": false}, {"no": 534, "day": "DAY 48", "word": "govern", "meaning": "(나라·기관 등을) 다스리다, 통치하다; (행동 등을) 결정하다", "example": "The country is governed by the military.", "answer": "governed", "kr": "그 나라는 군부에 의해 통치된다.", "fav": false}, {"no": 535, "day": "DAY 48", "word": "throne", "meaning": "왕좌, 왕위; 군주", "example": "The king passed on the throne to his son.", "answer": "throne", "kr": "왕은 아들에게 왕위를 물려주었다.", "fav": false}, {"no": 536, "day": "DAY 48", "word": "parliament", "meaning": "의회, 국회", "example": "The French Parliament rejected an anti-democratic Internet law.", "answer": "Parliament", "kr": "프랑스 의회는 반민주적인 인터넷 법안을 부결시켰다.", "fav": false}, {"no": 537, "day": "DAY 48", "word": "senator", "meaning": "상원 의원", "example": "The senator objected to the president's discretionary powers.", "answer": "senator", "kr": "그 상원의원은 대통령의 재량권에 반대했다.", "fav": false}, {"no": 538, "day": "DAY 48", "word": "poll", "meaning": "투표; 여론 조사; (표를) 얻다; 여론 조사를 하다", "example": "When the polls opened at 8a.m., about 200 people were waiting in line to vote.", "answer": "polls", "kr": "오전 8시에 투표소가 열렸을 때 약 200명이 투표를 위해 줄을 서서 기다리고 있었다.", "fav": false}, {"no": 539, "day": "DAY 48", "word": "candidate", "meaning": "후보자, 지원자", "example": "He is the democratic candidate for mayor of New York.", "answer": "candidate", "kr": "그는 뉴욕 시장직의 민주당 후보이다.", "fav": false}, {"no": 540, "day": "DAY 48", "word": "vote", "meaning": "투표; 투표[선거]권; 투표하다", "example": "About 56 percent of eligible voters cast a vote for president.", "answer": "vote", "kr": "자격 있는 유권자의 약 56퍼센트가 대통령에게 표를 던졌다.", "fav": false}, {"no": 541, "day": "DAY 49", "word": "cosmos", "meaning": "(질서와 조화가 있는 체계라고 생각된) 우주", "example": "The professor explained the origins of the cosmos.", "answer": "cosmos", "kr": "그 교수는 우주의 기원을 설명했다.", "fav": false}, {"no": 542, "day": "DAY 49", "word": "tide", "meaning": "조수(의 간만); ((the ~)) 경향", "example": "The best times to fish are when the tide is coming in or going out.", "answer": "tide", "kr": "낚시하기 가장 좋은 시간은 조수가 들어오거나 나갈 때이다.", "fav": false}, {"no": 543, "day": "DAY 49", "word": "hemisphere", "meaning": "(지구·천체의) 반구", "example": "This picture shows the southern hemisphere of Mars.", "answer": "hemisphere", "kr": "이 사진은 화성의 남반구를 보여준다.", "fav": false}, {"no": 544, "day": "DAY 49", "word": "erode", "meaning": "침식하다[되다]", "example": "Beach rocks are eroded by waves.", "answer": "eroded", "kr": "해변의 바위는 파도에 침식된다.", "fav": false}, {"no": 545, "day": "DAY 49", "word": "glacier", "meaning": "빙하", "example": "Greenland's glaciers are melting twice as fast as previously reported.", "answer": "glaciers", "kr": "그린란드의 빙하는 이전에 보고된 것보다 두 배 빠르게 녹고 있다.", "fav": false}, {"no": 546, "day": "DAY 49", "word": "landscape", "meaning": "풍경, 경치", "example": "The landscape seen from the top of the mountain was beautiful.", "answer": "landscape", "kr": "산 정상에서 본 풍경은 아름다웠다.", "fav": false}, {"no": 547, "day": "DAY 49", "word": "aquatic", "meaning": "물의; 물속에 사는", "example": "Aquatic sports such as water skiing are very popular.", "answer": "Aquatic", "kr": "수상 스키 같은 수상 스포츠는 매우 인기가 있다.", "fav": false}, {"no": 548, "day": "DAY 49", "word": "fossil", "meaning": "화석", "example": "Some dinosaur footprint fossils were found near the beach.", "answer": "fossils", "kr": "해변 근처에서 공룡 발자국 화석이 발견되었다.", "fav": false}, {"no": 549, "day": "DAY 49", "word": "erupt", "meaning": "(화산이) 분출하다, 폭발하다", "example": "The volcano erupted and the whole town disappeared.", "answer": "erupted", "kr": "화산이 분출하여 그 마을 전체가 사라졌다.", "fav": false}, {"no": 550, "day": "DAY 49", "word": "atmosphere", "meaning": "((the ~)) 대기(권); 분위기", "example": "We should stop releasing toxic gases into the atmosphere.", "answer": "atmosphere", "kr": "우리는 대기 중으로 유독 가스를 방출하는 것을 멈춰야 한다.", "fav": false}, {"no": 551, "day": "DAY 49", "word": "orbit", "meaning": "궤도; 선회하다, 궤도를 그리며 돌다", "example": "Mercury orbits the sun faster than any other planet.", "answer": "orbits", "kr": "수성은 다른 어떤 행성보다 빠르게 태양 궤도를 돈다.", "fav": false}, {"no": 552, "day": "DAY 49", "word": "comet", "meaning": "혜성", "example": "When people look at a comet, they first notice the tail of the comet.", "answer": "comet", "kr": "사람들은 혜성을 볼 때 가장 먼저 그 꼬리를 알아챈다.", "fav": false}, {"no": 553, "day": "DAY 49", "word": "astronaut", "meaning": "우주 비행사", "example": "His dream was to be an astronaut and he finally succeeded.", "answer": "astronaut", "kr": "그의 꿈은 우주 비행사가 되는 것이었고 마침내 그 꿈을 이루었다.", "fav": false}, {"no": 554, "day": "DAY 49", "word": "galaxy", "meaning": "은하(수), 은하계", "example": "I think there is a high potential for extraterrestrial life in our galaxy.", "answer": "galaxy", "kr": "나는 우리 은하에 외계 생명체가 존재할 가능성이 높다고 생각한다.", "fav": false}, {"no": 555, "day": "DAY 49", "word": "meteorite", "meaning": "운석", "example": "A meteorite from Mars was found by a team of scientists in 1996.", "answer": "meteorite", "kr": "1996년 과학자 팀이 화성에서 온 운석을 발견했다.", "fav": false}, {"no": 556, "day": "DAY 49", "word": "satellite", "meaning": "위성, 인공위성", "example": "Our country succeeded in launching the satellite into orbit.", "answer": "satellite", "kr": "우리나라는 위성을 궤도에 발사하는 데 성공했다.", "fav": false}, {"no": 557, "day": "DAY 49", "word": "solar", "meaning": "태양의", "example": "My house uses solar energy to produce hot water.", "answer": "solar", "kr": "우리 집은 온수를 만들기 위해 태양 에너지를 사용한다.", "fav": false}, {"no": 558, "day": "DAY 49", "word": "lunar", "meaning": "달의; 음력의", "example": "People celebrate the first full moon of the lunar calendar.", "answer": "lunar", "kr": "사람들은 음력 첫 보름달을 기념한다.", "fav": false}, {"no": 559, "day": "DAY 49", "word": "evaporate", "meaning": "(물 등이) 증발하다[시키다]", "example": "Water evaporates quickly when the temperature is high.", "answer": "evaporates", "kr": "기온이 높으면 물은 빠르게 증발한다.", "fav": false}, {"no": 560, "day": "DAY 49", "word": "vapor", "meaning": "증기", "example": "The amount of water vapor in the air varies depending on temperature.", "answer": "vapor", "kr": "공기 중 수증기의 양은 온도에 따라 달라진다.", "fav": false}, {"no": 561, "day": "DAY 49", "word": "chemical", "meaning": "화학의, 화학적인; 화학 제품[물질]", "example": "Pesticides include chemicals to kill pests such as insects.", "answer": "chemicals", "kr": "살충제에는 곤충 같은 해충을 죽이는 화학물질이 포함되어 있다.", "fav": false}, {"no": 562, "day": "DAY 49", "word": "melt", "meaning": "녹다, 녹이다", "example": "Ice melts and forms liquid water.", "answer": "melts", "kr": "얼음이 녹아 액체 상태의 물이 된다.", "fav": false}, {"no": 563, "day": "DAY 49", "word": "element", "meaning": "요소, 성분; [화학] 원소", "example": "The symbol of an element is a short way of representing it.", "answer": "element", "kr": "원소의 기호는 그것을 나타내는 간단한 방법이다.", "fav": false}, {"no": 564, "day": "DAY 49", "word": "elastic", "meaning": "탄력 있는, 탄성의; 고무줄", "example": "This hairband is elastic, so it will fit anyone.", "answer": "elastic", "kr": "이 머리끈은 탄력이 있어서 누구에게나 맞을 것이다.", "fav": false}, {"no": 565, "day": "DAY 49", "word": "filter", "meaning": "거르다, 여과하다[되다]; 여과기", "example": "Wetlands filter water by trapping and absorbing harmful bacteria.", "answer": "filter", "kr": "습지는 해로운 박테리아를 가두고 흡수하여 물을 정화한다.", "fav": false}, {"no": 566, "day": "DAY 49", "word": "fluid", "meaning": "유동성의; 유동적인; 유동 (액체·기체의 총칭)", "example": "If you have a fever, drink plenty of fluids.", "answer": "fluids", "kr": "열이 있으면 수분을 충분히 섭취해라.", "fav": false}, {"no": 567, "day": "DAY 49", "word": "friction", "meaning": "[물리] 마찰; 불화, 충돌", "example": "As you rub your hands, friction creates heat.", "answer": "friction", "kr": "손을 문지르면 마찰이 열을 발생시킨다.", "fav": false}, {"no": 568, "day": "DAY 49", "word": "float", "meaning": "(물 위에) 뜨다, (물 위·공중에서) 떠다니다", "example": "An empty bottle floats, but as you fill it with water, it sinks.", "answer": "floats", "kr": "빈 병은 물에 뜨지만, 물을 채우면 가라앉는다.", "fav": false}, {"no": 569, "day": "DAY 49", "word": "atom", "meaning": "원자", "example": "A molecule is composed of atoms.", "answer": "atoms", "kr": "분자는 원자로 구성되어 있다.", "fav": false}, {"no": 570, "day": "DAY 49", "word": "suck", "meaning": "빨다; 빨아들이다, 흡수하다", "example": "Black holes suck in heat as well as light.", "answer": "suck", "kr": "블랙홀은 빛뿐만 아니라 열도 빨아들인다.", "fav": false}, {"no": 571, "day": "DAY 50", "word": "ambassador", "meaning": "대사, 사절, 특사", "example": "He was appointed the new Korean ambassador to China.", "answer": "ambassador", "kr": "그는 새로운 주중국 한국 대사로 임명되었다.", "fav": false}, {"no": 572, "day": "DAY 50", "word": "architect", "meaning": "건축가, 설계자", "example": "A famous architect designed this building.", "answer": "architect", "kr": "유명한 건축가가 이 건물을 설계했다.", "fav": false}, {"no": 573, "day": "DAY 50", "word": "athlete", "meaning": "운동선수", "example": "A top athlete needs passion and natural talent.", "answer": "athlete", "kr": "뛰어난 운동선수에게는 열정과 타고난 재능이 필요하다.", "fav": false}, {"no": 574, "day": "DAY 50", "word": "counselor", "meaning": "상담원, 조언자", "example": "The counselor helped me find my career path.", "answer": "counselor", "kr": "그 상담사는 내가 진로를 찾는 데 도움을 주었다.", "fav": false}, {"no": 575, "day": "DAY 50", "word": "pharmacist", "meaning": "약사, 제약사", "example": "The pharmacist filled the prescription.", "answer": "pharmacist", "kr": "약사가 처방전대로 약을 조제했다.", "fav": false}, {"no": 576, "day": "DAY 50", "word": "therapist", "meaning": "치료 전문가", "example": "An art therapist uses the visual arts as a medium for healing.", "answer": "therapist", "kr": "미술 치료사는 시각 예술을 치유의 매개체로 사용한다.", "fav": false}, {"no": 577, "day": "DAY 50", "word": "consultant", "meaning": "컨설턴트, 상담자", "example": "Our company is seeking a financial consultant with broad experience.", "answer": "consultant", "kr": "우리 회사는 폭넓은 경험을 가진 재무 컨설턴트를 구하고 있다.", "fav": false}, {"no": 578, "day": "DAY 50", "word": "alchemist", "meaning": "연금술사", "example": "The poet is an alchemist of language.", "answer": "alchemist", "kr": "그 시인은 언어의 연금술사이다.", "fav": false}, {"no": 579, "day": "DAY 50", "word": "chef", "meaning": "요리사, 주방장", "example": "The chef at this restaurant always uses fresh ingredients.", "answer": "chef", "kr": "이 식당의 요리사는 항상 신선한 재료를 사용한다.", "fav": false}, {"no": 580, "day": "DAY 50", "word": "technician", "meaning": "기술자, 전문가", "example": "The technician explained what was wrong with our car.", "answer": "technician", "kr": "그 기술자는 우리 차의 문제가 무엇인지 설명해주었다.", "fav": false}, {"no": 581, "day": "DAY 50", "word": "mechanic", "meaning": "수리공, 기계공", "example": "If I were a car mechanic, I could fix my own car.", "answer": "mechanic", "kr": "내가 만약 자동차 정비사라면 내 차를 직접 고칠 수 있을 텐데.", "fav": false}, {"no": 582, "day": "DAY 50", "word": "repairman", "meaning": "수리공", "example": "You should call a repairman to fix your computer.", "answer": "repairman", "kr": "컴퓨터를 고치려면 수리기사를 불러야 한다.", "fav": false}, {"no": 583, "day": "DAY 50", "word": "miner", "meaning": "광산 노동자, 광부", "example": "He works as a miner at a gold mine.", "answer": "miner", "kr": "그는 금광에서 광부로 일한다.", "fav": false}, {"no": 584, "day": "DAY 50", "word": "zoologist", "meaning": "동물학자", "example": "The zoologist observed the behavior of the lions.", "answer": "zoologist", "kr": "동물학자는 사자들의 행동을 관찰했다.", "fav": false}, {"no": 585, "day": "DAY 50", "word": "astronomer", "meaning": "천문학자", "example": "The astronomer observed an asteroid through a telescope.", "answer": "astronomer", "kr": "천문학자는 망원경으로 소행성을 관측했다.", "fav": false}, {"no": 586, "day": "DAY 50", "word": "botanist", "meaning": "식물학자", "example": "The botanist knows the name of almost every flower on the island.", "answer": "botanist", "kr": "그 식물학자는 그 섬에 있는 거의 모든 꽃의 이름을 알고 있다.", "fav": false}, {"no": 587, "day": "DAY 50", "word": "sociolinguist", "meaning": "사회 언어학자", "example": "The sociolinguist studied conversational styles pertaining to women and men.", "answer": "sociolinguist", "kr": "그 사회언어학자는 남녀와 관련된 대화 스타일을 연구했다.", "fav": false}, {"no": 588, "day": "DAY 50", "word": "sociologist", "meaning": "사회학자", "example": "The sociologist investigated the problems of migrants' adaptation to a new social setting.", "answer": "sociologist", "kr": "그 사회학자는 이주민들이 새로운 사회 환경에 적응하는 문제를 조사했다.", "fav": false}, {"no": 589, "day": "DAY 50", "word": "scholar", "meaning": "학자", "example": "She is an authoritative scholar in history.", "answer": "scholar", "kr": "그녀는 역사 분야의 권위 있는 학자이다.", "fav": false}, {"no": 590, "day": "DAY 50", "word": "chemist", "meaning": "화학자", "example": "The chemist kept many strange liquids in his laboratory.", "answer": "chemist", "kr": "그 화학자는 자신의 실험실에 이상한 액체를 많이 보관했다.", "fav": false}, {"no": 591, "day": "DAY 50", "word": "diploma", "meaning": "졸업 증서, 졸업장", "example": "I received my diploma from Cornell University in the mail.", "answer": "diploma", "kr": "나는 코넬 대학에서 우편으로 졸업장을 받았다.", "fav": false}, {"no": 592, "day": "DAY 50", "word": "anatomy", "meaning": "해부; 해부학", "example": "All first-year medical students must attend this anatomy class.", "answer": "anatomy", "kr": "모든 의대 1학년생은 이 해부학 수업을 들어야 한다.", "fav": false}, {"no": 593, "day": "DAY 50", "word": "biotechnology", "meaning": "생물[생명] 공학", "example": "Biotechnology is a rapidly-growing new field.", "answer": "Biotechnology", "kr": "생명공학은 빠르게 성장하는 새로운 분야이다.", "fav": false}, {"no": 594, "day": "DAY 50", "word": "hygiene", "meaning": "위생; 위생학", "example": "She majored in dental hygiene at the university.", "answer": "hygiene", "kr": "그녀는 대학에서 치위생학을 전공했다.", "fav": false}, {"no": 595, "day": "DAY 50", "word": "anthropology", "meaning": "인류학", "example": "We studied ancient civilizations in our anthropology class.", "answer": "anthropology", "kr": "우리는 인류학 수업에서 고대 문명에 대해 배웠다.", "fav": false}, {"no": 596, "day": "DAY 50", "word": "archaeology", "meaning": "고고학", "example": "Many ancient historic sites have been identified through archaeology.", "answer": "archaeology", "kr": "많은 고대 유적지가 고고학을 통해 확인되었다.", "fav": false}, {"no": 597, "day": "DAY 50", "word": "ethics", "meaning": "윤리학; 윤리", "example": "Ethics is the study of what is right and what is not.", "answer": "Ethics", "kr": "윤리학은 무엇이 옳고 무엇이 그른지를 연구하는 학문이다.", "fav": false}, {"no": 598, "day": "DAY 50", "word": "hypnosis", "meaning": "최면, 최면술", "example": "They use hypnosis on patients who have mental problems and it works.", "answer": "hypnosis", "kr": "그들은 정신적 문제가 있는 환자들에게 최면술을 사용하는데 효과가 있다.", "fav": false}, {"no": 599, "day": "DAY 50", "word": "linguistics", "meaning": "언어학", "example": "Linguistics is the systematic study of human languages in general.", "answer": "Linguistics", "kr": "언어학은 인간 언어 전반을 체계적으로 연구하는 학문이다.", "fav": false}, {"no": 600, "day": "DAY 50", "word": "mythology", "meaning": "신화; 신화학", "example": "According to ancient Greek mythology, Poseidon is the sea god.", "answer": "mythology", "kr": "고대 그리스 신화에 따르면 포세이돈은 바다의 신이다.", "fav": false}];
+
+const ALL_DAYS = [...new Set(wordData.map(w => w.day))];
+
+/* =======================================================
+   즐겨찾기 로컬 저장 (localStorage)
+   같은 아이폰의 같은 브라우저/홈 화면 아이콘에서는
+   새로고침해도 즐겨찾기가 유지됩니다.
+   ======================================================= */
+const FAV_STORAGE_KEY = 'vocabmaster_favorites_v1';
+
+function loadFavoritesFromStorage(){
+  try{
+    const raw = localStorage.getItem(FAV_STORAGE_KEY);
+    if(!raw) return;
+    const favNos = new Set(JSON.parse(raw));
+    wordData.forEach(w => { w.fav = favNos.has(w.no); });
+  }catch(e){
+    console.warn('즐겨찾기 데이터를 불러오지 못했습니다.', e);
+  }
+}
+
+function saveFavoritesToStorage(){
+  try{
+    const favNos = wordData.filter(w => w.fav).map(w => w.no);
+    localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(favNos));
+  }catch(e){
+    console.warn('즐겨찾기 데이터를 저장하지 못했습니다.', e);
+  }
+}
+
+loadFavoritesFromStorage();
+
+function updateFavBadge(){
+  const el = document.getElementById('favBadge');
+  if(!el) return;
+  const n = wordData.filter(w => w.fav).length;
+  el.textContent = `즐겨찾기 ${n}`;
+}
+updateFavBadge();
+
+/* 카드별 "뒤집힘" 상태 (word/meaning 모드에서만 사용) */
+const revealedState = {};
+wordData.forEach(w => revealedState[w.no] = false);
+
+let displayMode = 'word'; // 'word' | 'meaning' | 'both'
+let spellingTestMode = false; // 뜻먼저 모드에서 스펠링 자가 확인 켜기/끄기
+
+/* =======================================================
+   2. 표시 모드 스위치 (단어장 / 즐겨찾기 공용)
+   ======================================================= */
+function setDisplayMode(mode){
+  displayMode = mode;
+  document.querySelectorAll('.mode-switch button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  wordData.forEach(w => revealedState[w.no] = false);
+
+  const showSpellRow = (mode === 'meaning');
+  document.getElementById('spellToggleRowList').style.display = showSpellRow ? 'flex' : 'none';
+  document.getElementById('spellToggleRowFav').style.display = showSpellRow ? 'flex' : 'none';
+
+  buildWordList();
+  buildFavList();
+}
+
+function toggleSpellingTest(){
+  spellingTestMode = !spellingTestMode;
+  document.getElementById('spellToggleSwitchList').classList.toggle('on', spellingTestMode);
+  document.getElementById('spellToggleSwitchFav').classList.toggle('on', spellingTestMode);
+  buildWordList();
+  buildFavList();
+}
+
+/* =======================================================
+   3. 단어 카드 렌더링 (단어장 / 즐겨찾기 공용)
+   ======================================================= */
+function createWordCard(w, onChange){
+  const card = document.createElement('div');
+  card.dataset.no = w.no;
+
+  const revealed = revealedState[w.no];
+  let faceHtml = '';
+  let showSpellCheck = false;
+
+  if(displayMode === 'both'){
+    faceHtml = `
+      <div class="en">${w.word}</div>
+      <div class="kr sub-line">${w.meaning}</div>
+    `;
+  } else if(displayMode === 'word'){
+    faceHtml = revealed
+      ? `<div class="kr">${w.meaning}</div>`
+      : `<div class="en">${w.word}</div>`;
+  } else {
+    if(revealed){
+      faceHtml = `<div class="en">${w.word}</div>`;
+    } else {
+      faceHtml = `<div class="kr">${w.meaning}</div>`;
+      showSpellCheck = spellingTestMode;
+    }
+  }
+
+  card.className = 'word-card' + (showSpellCheck ? ' expanded' : '');
+
+  card.innerHTML = `
+    <div class="no">${w.no}</div>
+    <div class="word-face">
+      ${faceHtml}
+      ${showSpellCheck ? `
+        <div class="spell-check-row">
+          <input type="text" class="spell-check-input" placeholder="영어 스펠링 입력" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="spell-check-btn" type="button">확인</button>
+        </div>
+        <div class="spell-check-feedback"></div>
+      ` : ''}
+    </div>
+    <div class="star ${w.fav ? 'active' : ''}" data-star="${w.no}">${w.fav ? '★' : '☆'}</div>
+  `;
+
+  if(displayMode !== 'both'){
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.star')) return;
+      if(e.target.closest('.spell-check-row')) return;
+      revealedState[w.no] = !revealedState[w.no];
+      if(onChange) onChange(); else { buildWordList(); buildFavList(); }
+    });
+  }
+
+  const star = card.querySelector('.star');
+  star.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    w.fav = !w.fav;
+    saveFavoritesToStorage();
+    updateFavBadge();
+    if(onChange) onChange(); else { buildWordList(); buildFavList(); }
+  });
+
+  if(showSpellCheck){
+    const input = card.querySelector('.spell-check-input');
+    const btn = card.querySelector('.spell-check-btn');
+    const fb = card.querySelector('.spell-check-feedback');
+    const doCheck = ()=>{
+      const val = input.value.trim().toLowerCase();
+      if(!val) return;
+      const correct = val === w.word.toLowerCase();
+      input.classList.toggle('correct', correct);
+      input.classList.toggle('wrong', !correct);
+      fb.className = 'spell-check-feedback show ' + (correct ? 'correct' : 'wrong');
+      fb.textContent = correct ? '정답이에요!' : `다시 시도해 보세요`;
+      if(correct){
+        input.disabled = true;
+        btn.disabled = true;
+        setTimeout(()=>{
+          revealedState[w.no] = true;
+          if(onChange) onChange(); else { buildWordList(); buildFavList(); }
+        }, 700);
+      }
+      // 오답이면 잠그지 않고 바로 다시 시도할 수 있게 둠
+    };
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); doCheck(); });
+    input.addEventListener('click', (e)=> e.stopPropagation());
+    input.addEventListener('input', ()=>{
+      if(input.classList.contains('wrong')){
+        input.classList.remove('wrong');
+        fb.className = 'spell-check-feedback';
+        fb.textContent = '';
+      }
+    });
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ e.stopPropagation(); doCheck(); }
+    });
+  }
+
+  return card;
+}
+
+/* =======================================================
+   4. 단어장 탭 (Day 아코디언)
+   ======================================================= */
+const openDays = {};
+
+function buildWordList(){
+  const days = {};
+  wordData.forEach(w=>{
+    if(!days[w.day]) days[w.day] = [];
+    days[w.day].push(w);
+  });
+
+  const container = document.getElementById('dayContainer');
+  container.innerHTML = '';
+
+  Object.keys(days).forEach((dayName, idx)=>{
+    if(!(dayName in openDays)) openDays[dayName] = (idx === 0);
+    const words = days[dayName];
+    const block = document.createElement('div');
+    block.className = 'day-block' + (openDays[dayName] ? ' open':'');
+
+    const header = document.createElement('div');
+    header.className = 'day-header';
+    header.innerHTML = `
+      <div>
+        <div class="day-title">${dayName}</div>
+        <div class="day-sub">${words.length}개 단어</div>
+      </div>
+      <div class="chevron">▼</div>
+    `;
+    header.onclick = ()=>{
+      openDays[dayName] = !openDays[dayName];
+      block.classList.toggle('open');
+    };
+
+    const list = document.createElement('div');
+    list.className = 'word-list';
+    words.forEach(w => list.appendChild(createWordCard(w)));
+
+    block.appendChild(header);
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
+
+/* =======================================================
+   5. 즐겨찾기 탭
+   ======================================================= */
+function buildFavList(){
+  const container = document.getElementById('favContainer');
+  const favWords = wordData.filter(w => w.fav);
+
+  if(favWords.length === 0){
+    container.innerHTML = `<div class="empty-note"><div class="empty-star">☆</div>아직 즐겨찾기한 단어가 없어요.<br>단어장에서 별표를 눌러 추가해보세요.</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  const flat = document.createElement('div');
+  flat.className = 'fav-flat-list';
+  favWords.forEach(w => flat.appendChild(createWordCard(w)));
+  container.appendChild(flat);
+}
+
+/* =======================================================
+   6. 퀴즈 공용 엔진 (빈칸연습 / 스펠링연습 / 뜻고르기)
+   ======================================================= */
+const QUIZ_META = {
+  blank:  { area: 'quizArea',   title: '예문 빈칸 채우기' },
+  spell:  { area: 'spellArea',  title: '뜻 보고 스펠링 쓰기' },
+  choice: { area: 'choiceArea', title: '단어 보고 뜻 고르기' },
+};
+
+function makeQuizState(){
+  return {
+    started: false,
+    answered: false,
+    pool: [],
+    idx: 0,
+    stats: { total: 0, correct: 0, wrong: 0 },
+    wrongMap: {},
+    selectedDays: new Set(ALL_DAYS),
+    favOnly: false,
+  };
+}
+
+const quiz = {
+  blank: makeQuizState(),
+  spell: makeQuizState(),
+  choice: makeQuizState(),
+};
+
+let showTranslation = true;              // 빈칸연습 전용: 해석 보기
+let hintToggles = { blank: false, spell: false }; // 첫 글자 힌트 (빈칸/스펠링)
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function getFilteredPool(type){
+  const q = quiz[type];
+  return wordData.filter(w => q.selectedDays.has(w.day) && (!q.favOnly || w.fav));
+}
+
+function buildBlankSentence(item){
+  const re = new RegExp(item.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi");
+  return item.example.replace(re, '<span class="blank-slot">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>');
+}
+
+/* ---------- 출제 범위 설정 화면 ---------- */
+function renderQuizSetup(type, msg){
+  const q = quiz[type];
+  const area = document.getElementById(QUIZ_META[type].area);
+  const poolSize = getFilteredPool(type).length;
+
+  const dayChips = ALL_DAYS.map(d => `
+    <div class="day-chip ${q.selectedDays.has(d) ? 'active':''}" onclick="toggleDayChip('${type}','${d}')">${d.replace('DAY ','D')}</div>
+  `).join('');
+
+  area.innerHTML = `
+    <div class="setup-card">
+      <h3>${QUIZ_META[type].title} · 출제 범위 설정</h3>
+      <div class="setup-toolbar">
+        <button onclick="selectAllDays('${type}')">전체 선택</button>
+        <button onclick="clearAllDays('${type}')">전체 해제</button>
+      </div>
+      <div class="day-chip-grid">${dayChips}</div>
+
+      <div class="fav-only-row">
+        <span>즐겨찾기한 단어만 출제</span>
+        <div class="switch ${q.favOnly ? 'on':''}" onclick="toggleFavOnly('${type}')"><div class="knob"></div></div>
+      </div>
+
+      <div class="pool-count">현재 설정으로 <b>${poolSize}</b>개 단어가 출제됩니다.</div>
+    </div>
+    ${msg ? `<div class="feedback show wrong">${msg}</div>` : ''}
+    <button class="btn btn-primary" onclick="startQuiz('${type}')">${QUIZ_META[type].title} 시작하기</button>
+  `;
+}
+
+function toggleDayChip(type, day){
+  const q = quiz[type];
+  if(q.selectedDays.has(day)) q.selectedDays.delete(day); else q.selectedDays.add(day);
+  renderQuizSetup(type);
+}
+function selectAllDays(type){ quiz[type].selectedDays = new Set(ALL_DAYS); renderQuizSetup(type); }
+function clearAllDays(type){ quiz[type].selectedDays = new Set(); renderQuizSetup(type); }
+function toggleFavOnly(type){ quiz[type].favOnly = !quiz[type].favOnly; renderQuizSetup(type); }
+
+function getNextQuizItem(type){
+  const q = quiz[type];
+  if(q.idx >= q.pool.length){
+    q.pool = shuffle(getFilteredPool(type));
+    q.idx = 0;
+  }
+  return q.pool[q.idx++];
+}
+
+function startQuiz(type){
+  const q = quiz[type];
+  const pool = getFilteredPool(type);
+  if(pool.length === 0){
+    renderQuizSetup(type, '선택한 조건에 해당하는 단어가 없어요. 범위를 다시 선택해주세요.');
+    return;
+  }
+  if(type === 'choice' && pool.length < 5){
+    renderQuizSetup(type, '5지선다 문제를 내려면 최소 5개 단어가 필요해요. 범위를 넓혀주세요.');
+    return;
+  }
+  q.started = true;
+  q.pool = shuffle(pool);
+  q.idx = 0;
+  q.stats = { total: 0, correct: 0, wrong: 0 };
+  q.wrongMap = {};
+  renderQuizQuestion(type);
+}
+
+/* ---------- 문제 렌더링 (타입별 분기) ---------- */
+function statsBarHtml(type){
+  const q = quiz[type];
+  return `
+    <div class="quiz-topbar">
+      <div class="quiz-stats">
+        <span>푼 문제 <b>${q.stats.total}</b></span>
+        <span class="ok">맞음 <b>${q.stats.correct}</b></span>
+        <span class="no">틀림 <b>${q.stats.wrong}</b></span>
+      </div>
+      <button class="end-btn" onclick="endQuiz('${type}')">그만 풀기</button>
+    </div>
+  `;
+}
+
+function buildChoiceOptions(item, type){
+  const pool = getFilteredPool(type).filter(w => w.no !== item.no);
+  const distractors = shuffle(pool).slice(0, 4).map(w => w.meaning);
+  return shuffle([item.meaning, ...distractors]);
+}
+
+function renderQuizQuestion(type){
+  const q = quiz[type];
+  const area = document.getElementById(QUIZ_META[type].area);
+  const item = getNextQuizItem(type);
+  q.answered = false;
+  area.dataset.currentNo = item.no;
+
+  const topBar = statsBarHtml(type);
+
+  if(type === 'blank'){
+    area.innerHTML = topBar + `
+      <div class="quiz-card">
+        <div class="label-row">
+          <div class="label">예문 빈칸 채우기 · ${item.day}</div>
+          <div class="toggle-group">
+            <div class="trans-toggle toggle-trans" onclick="toggleTranslation()">
+              <span>해석</span><div class="switch small ${showTranslation ? 'on':''}"><div class="knob"></div></div>
+            </div>
+            <div class="trans-toggle toggle-firstletter" onclick="toggleFirstLetter('blank')">
+              <span>첫글자</span><div class="switch small ${hintToggles.blank ? 'on':''}"><div class="knob"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="sentence">${buildBlankSentence(item)}</div>
+        ${showTranslation && item.kr ? `<div class="kr-trans">${item.kr}</div>` : ''}
+        ${hintToggles.blank ? `<div class="hint-line">정답은 <b>${item.answer[0].toUpperCase()}</b>로 시작해요</div>` : ''}
+      </div>
+      <div class="answer-row">
+        <input type="text" id="quizInput_blank" placeholder="정답 철자를 입력하세요" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+      <button class="btn btn-primary" id="quizActionBtn_blank" onclick="checkTypedAnswer('blank')">확인</button>
+      <div class="feedback" id="quizFeedback_blank"></div>
+    `;
+  } else if(type === 'spell'){
+    area.innerHTML = topBar + `
+      <div class="quiz-card">
+        <div class="label-row">
+          <div class="label">뜻 보고 스펠링 쓰기 · ${item.day}</div>
+          <div class="toggle-group">
+            <div class="trans-toggle toggle-firstletter" onclick="toggleFirstLetter('spell')">
+              <span>첫글자</span><div class="switch small ${hintToggles.spell ? 'on':''}"><div class="knob"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="sentence">${item.meaning}</div>
+        ${hintToggles.spell ? `<div class="hint-line">정답은 <b>${item.word[0].toUpperCase()}</b>로 시작해요 (${item.word.length}글자)</div>` : ''}
+      </div>
+      <div class="answer-row">
+        <input type="text" id="quizInput_spell" placeholder="영단어 스펠링을 입력하세요" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+      <button class="btn btn-primary" id="quizActionBtn_spell" onclick="checkTypedAnswer('spell')">확인</button>
+      <div class="feedback" id="quizFeedback_spell"></div>
+    `;
+  } else if(type === 'choice'){
+    const options = buildChoiceOptions(item, type);
+    area.innerHTML = topBar + `
+      <div class="quiz-card">
+        <div class="label">단어 보고 뜻 고르기 · ${item.day}</div>
+        <div class="sentence">${item.word}</div>
+      </div>
+      <div class="choice-list" id="choiceList_choice">
+        ${options.map(opt => `<button class="choice-btn" data-correct="${opt === item.meaning}" onclick="checkChoiceAnswer('choice', this, ${item.no})">${opt}</button>`).join('')}
+      </div>
+      <div class="feedback" id="quizFeedback_choice"></div>
+    `;
+  }
+
+  const input = document.getElementById(`quizInput_${type}`);
+  if(input){
+    input.focus();
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        if(!q.answered) checkTypedAnswer(type);
+        else renderQuizQuestion(type);
+      }
+    });
+  }
+}
+
+/* ---------- 해석 / 첫글자 힌트 토글 (입력값 유지 위해 부분 갱신) ---------- */
+function toggleTranslation(){
+  showTranslation = !showTranslation;
+  const area = document.getElementById(QUIZ_META.blank.area);
+  const sw = area.querySelector('.toggle-trans .switch');
+  if(sw) sw.classList.toggle('on', showTranslation);
+
+  const card = area.querySelector('.quiz-card');
+  const no = area.dataset.currentNo;
+  const item = wordData.find(w => String(w.no) === String(no));
+  let kr = card.querySelector('.kr-trans');
+
+  if(showTranslation && item && item.kr){
+    if(!kr){
+      kr = document.createElement('div');
+      kr.className = 'kr-trans';
+      const hint = card.querySelector('.hint-line');
+      if(hint) card.insertBefore(kr, hint); else card.appendChild(kr);
+    }
+    kr.textContent = item.kr;
+  } else if(kr){
+    kr.remove();
+  }
+}
+
+function toggleFirstLetter(type){
+  hintToggles[type] = !hintToggles[type];
+  const area = document.getElementById(QUIZ_META[type].area);
+  const sw = area.querySelector('.toggle-firstletter .switch');
+  if(sw) sw.classList.toggle('on', hintToggles[type]);
+
+  const card = area.querySelector('.quiz-card');
+  const no = area.dataset.currentNo;
+  const item = wordData.find(w => String(w.no) === String(no));
+  let hint = card.querySelector('.hint-line');
+  const targetWord = (type === 'blank') ? item.answer : item.word;
+
+  if(hintToggles[type] && item){
+    if(!hint){
+      hint = document.createElement('div');
+      hint.className = 'hint-line';
+      card.appendChild(hint);
+    }
+    const hintText = (type === 'blank')
+      ? `정답은 <b>${targetWord[0].toUpperCase()}</b>로 시작해요`
+      : `정답은 <b>${targetWord[0].toUpperCase()}</b>로 시작해요 (${targetWord.length}글자)`;
+    hint.innerHTML = hintText;
+  } else if(hint){
+    hint.remove();
+  }
+}
+
+/* ---------- 채점: 타이핑형 (빈칸연습 / 스펠링연습) ---------- */
+function checkTypedAnswer(type){
+  const q = quiz[type];
+  if(q.answered) return;
+  const area = document.getElementById(QUIZ_META[type].area);
+  const no = area.dataset.currentNo;
+  const item = wordData.find(w => String(w.no) === String(no));
+  const input = document.getElementById(`quizInput_${type}`);
+  const userVal = input.value.trim().toLowerCase();
+  const correctVal = (type === 'blank' ? item.answer : item.word).toLowerCase();
+  const isCorrect = userVal === correctVal;
+
+  q.answered = true;
+  q.stats.total++;
+  if(isCorrect){ q.stats.correct++; } else { q.stats.wrong++; q.wrongMap[item.no] = item; }
+
+  input.classList.add(isCorrect ? 'correct' : 'wrong');
+  input.disabled = true;
+
+  const fb = document.getElementById(`quizFeedback_${type}`);
+  fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+  fb.innerHTML = isCorrect
+    ? `정답이에요!`
+    : `오답이에요. 정답: <span class="ans">${type === 'blank' ? item.answer : item.word}</span>`;
+
+  const stats = area.querySelector('.quiz-stats');
+  if(stats){
+    stats.innerHTML = `
+      <span>푼 문제 <b>${q.stats.total}</b></span>
+      <span class="ok">맞음 <b>${q.stats.correct}</b></span>
+      <span class="no">틀림 <b>${q.stats.wrong}</b></span>
+    `;
+  }
+
+  const btn = document.getElementById(`quizActionBtn_${type}`);
+  btn.textContent = '다음 문제';
+  btn.onclick = ()=> renderQuizQuestion(type);
+}
+
+/* ---------- 채점: 5지선다 (뜻고르기) ---------- */
+function checkChoiceAnswer(type, btnEl, no){
+  const q = quiz[type];
+  if(q.answered) return;
+  const area = document.getElementById(QUIZ_META[type].area);
+  const item = wordData.find(w => String(w.no) === String(no));
+  const isCorrect = btnEl.dataset.correct === 'true';
+
+  q.answered = true;
+  q.stats.total++;
+  if(isCorrect){ q.stats.correct++; } else { q.stats.wrong++; q.wrongMap[item.no] = item; }
+
+  area.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled = true;
+    if(b.dataset.correct === 'true') b.classList.add('correct');
+    else if(b === btnEl) b.classList.add('wrong');
+  });
+
+  const fb = document.getElementById(`quizFeedback_${type}`);
+  fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+  fb.innerHTML = isCorrect ? `정답이에요!` : `오답이에요. 정답: <span class="ans">${item.meaning}</span>`;
+
+  const stats = area.querySelector('.quiz-stats');
+  if(stats){
+    stats.innerHTML = `
+      <span>푼 문제 <b>${q.stats.total}</b></span>
+      <span class="ok">맞음 <b>${q.stats.correct}</b></span>
+      <span class="no">틀림 <b>${q.stats.wrong}</b></span>
+    `;
+  }
+
+  if(!document.getElementById('choiceNextBtn')){
+    const nextBtn = document.createElement('button');
+    nextBtn.id = 'choiceNextBtn';
+    nextBtn.className = 'btn btn-primary';
+    nextBtn.style.marginTop = '4px';
+    nextBtn.textContent = '다음 문제';
+    nextBtn.onclick = ()=> renderQuizQuestion('choice');
+    fb.insertAdjacentElement('afterend', nextBtn);
+  }
+}
+
+/* ---------- 세션 종료: 결과 + 틀린 단어 목록 ---------- */
+function endQuiz(type){
+  const q = quiz[type];
+  q.started = false;
+  const area = document.getElementById(QUIZ_META[type].area);
+  const wrongItems = Object.values(q.wrongMap);
+
+  let wrongHtml = '';
+  if(wrongItems.length > 0){
+    wrongHtml = `<div class="wrong-list-title">틀린 단어 (${wrongItems.length}개) · 별표를 눌러 즐겨찾기에 추가해보세요</div>`;
+    wrongItems.forEach(w=>{
+      const showAnswerLine = (type === 'blank' && w.answer.toLowerCase() !== w.word.toLowerCase());
+      wrongHtml += `
+        <div class="wrong-item" data-no="${w.no}">
+          <div>
+            <div class="wi-word">${w.word}</div>
+            <div class="wi-meaning">${w.meaning}</div>
+            ${showAnswerLine ? `<div class="wi-answer">예문 속 표기: ${w.answer}</div>` : ''}
+          </div>
+          <div class="star ${w.fav ? 'active' : ''}" data-star="${w.no}">${w.fav ? '★' : '☆'}</div>
+        </div>
+      `;
+    });
+  }
+
+  area.innerHTML = `
+    <div class="result-box">
+      <div class="big">수고했어요!</div>
+      <div class="result-summary">
+        <div>푼 문제<b>${q.stats.total}</b></div>
+        <div class="ok">맞은 문제<b>${q.stats.correct}</b></div>
+        <div class="no">틀린 문제<b>${q.stats.wrong}</b></div>
+      </div>
+    </div>
+    ${wrongHtml}
+    <button class="btn btn-primary" onclick="startQuiz('${type}')">같은 조건으로 다시 풀기</button>
+    <button class="btn btn-secondary" onclick="renderQuizSetup('${type}')">출제 범위 다시 설정하기</button>
+  `;
+
+  wrongItems.forEach(w=>{
+    const el = area.querySelector(`.wrong-item[data-no="${w.no}"] .star`);
+    if(el){
+      el.addEventListener('click', ()=>{
+        w.fav = !w.fav;
+        saveFavoritesToStorage();
+        updateFavBadge();
+        el.classList.toggle('active', w.fav);
+        el.textContent = w.fav ? '★' : '☆';
+      });
+    }
+  });
+}
+
+/* =======================================================
+   7. 탭 전환
+   ======================================================= */
+const PAGE_IDS = { list:'page-list', fav:'page-fav', blank:'page-quiz', spell:'page-spell', choice:'page-choice' };
+const TAB_BTN_IDS = { list:'tabBtnList', fav:'tabBtnFav', blank:'tabBtnQuiz', spell:'tabBtnSpell', choice:'tabBtnChoice' };
+
+function switchTab(tab){
+  Object.keys(PAGE_IDS).forEach(t=>{
+    document.getElementById(PAGE_IDS[t]).classList.toggle('active', tab === t);
+    document.getElementById(TAB_BTN_IDS[t]).classList.toggle('active', tab === t);
+  });
+
+  if(tab === 'fav') buildFavList();
+  if((tab === 'blank' || tab === 'spell' || tab === 'choice') && !quiz[tab].started){
+    renderQuizSetup(tab);
+  }
+}
+
+/* =======================================================
+   초기 실행
+   ======================================================= */
+buildWordList();
+buildFavList();
+</script>
+</body>
+</html>
